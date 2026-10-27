@@ -3,13 +3,14 @@ import { h, icon } from "./ui.js";
 import { renderEmployees } from "./views/funcionarios.js";
 import { renderAlerts } from "./views/alertas.js";
 import { renderOverview } from "./views/visao-geral.js";
+import { renderRelatos } from "./views/relatos.js";
 
 const routes = [
   ["#/visao-geral", "Visão geral", "grid"], ["#/funcionarios", "Funcionários", "people"],
   ["#/alertas", "Alertas", "warning"], ["#/relatos", "Relatos", "inbox"],
   ["#/bem-estar", "Bem-estar", "heart"], ["#/relatorios", "Relatórios", "chart"]
 ];
-const state = { data: null, profile: null, query: "", employeeId: null, alertId: null, detailsOpen: true, pageData: {}, loadingPage: "", pageError: "" };
+const state = { data: null, profile: null, query: "", employeeId: null, alertId: null, reportId: null, detailsOpen: true, pageData: {}, loadingPage: "", pageError: "" };
 const root = document.querySelector("#app");
 
 function currentRoute() {
@@ -41,6 +42,7 @@ function render() {
     content = renderOverview({ data: state.data, serie: extra.serie, relatosNovos: state.profile === "RH" ? extra.relatos.filter((item) => item.status === "NOVO").length : null, onNavigate: navigate });
   } else if (path === "#/funcionarios") content = renderEmployees({ data: state.data, query: state.query, selectedId: state.employeeId, onSelect: (id) => { state.employeeId = id; state.detailsOpen = true; render(); }, detailsOpen: state.detailsOpen, onClose: closeDetails });
   else if (path === "#/alertas") content = renderAlerts({ data: state.data, query: state.query, selectedId: state.alertId, onSelect: (id) => { state.alertId = id; state.detailsOpen = true; render(); }, detailsOpen: state.detailsOpen, onClose: closeDetails });
+  else if (path === "#/relatos") content = renderRelatos({ profile: state.profile, reports: state.profile === "RH" ? state.pageData[path]?.relatos || [] : [], query: state.query, selectedId: state.reportId, detailsOpen: state.detailsOpen, onSelect: (id) => { state.reportId = id; state.detailsOpen = true; render(); }, onClose: closeDetails, onUpdate: render });
   else content = placeholder(active?.[1] || "Página", path);
   root.replaceChildren(sidebar, h("main", { className: "main" }, topbar, mobileNav, h("div", { className: "content" }, content)));
 }
@@ -73,11 +75,12 @@ async function loadPageData(path) {
 document.addEventListener("dashboard-search", (event) => {
   state.query = event.detail.query;
   render();
-  const selector = event.detail.source === "employees" ? ".employee-search input" : event.detail.source === "alerts" ? ".filter-search input" : ".topbar .search input";
+  const selector = event.detail.source === "employees" ? ".employee-search input" : event.detail.source === "alerts" ? ".filter-search input" : event.detail.source === "relatos" ? ".report-search input" : ".topbar .search input";
   const field = root.querySelector(selector);
   field?.focus();
   if (event.detail.focusPosition !== undefined) field?.setSelectionRange(event.detail.focusPosition, event.detail.focusPosition);
 });
+document.addEventListener("dashboard-refresh-view", render);
 window.addEventListener("hashchange", () => { state.query = ""; state.detailsOpen = true; state.pageError = ""; render(); loadPageData(currentRoute()); });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.detailsOpen && ["#/alertas", "#/funcionarios", "#/relatos", "#/bem-estar"].includes(currentRoute())) closeDetails();

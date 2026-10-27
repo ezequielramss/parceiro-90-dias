@@ -32,13 +32,33 @@ Retorna uma lista com `id`, `nome`, `iniciais`, `funcao`, `loja`, `diaJornada`, 
 
 Categorias: `CANSACO`, `SOBRECARGA`, `DESMOTIVACAO`, `VONTADE_DE_SAIR`, `DUVIDA`, `CONFLITO_COLEGA`, `CONFLITO_CHEFIA`, `ASSEDIO`, `SITUACAO_GRAVE`. Destinos de `CONFLITO_CHEFIA` e `ASSEDIO` são RH; `SITUACAO_GRAVE` também vai a RH. As demais categorias são encaminhadas ao gerente.
 
-## `GET /api/relatos` (somente perfil RH)
-
-A lista não contém loja, turno ou identidade; esses dados podem ser entregues no detalhe conforme política de acesso.
+## `GET /api/perfil`
 
 ```json
-[{"id":"r01","protocolo":"REL-2026-001","categoria":"Humilhação","severidade":"ALTA","status":"NOVO","criadoEm":"2026-10-27T09:20:00-03:00"}]
+{"perfil":"RH"}
 ```
+
+O cliente consulta o perfil antes de carregar relatos. Somente `RH` pode chamar `GET /api/relatos`.
+
+## `GET /api/relatos` (somente perfil RH)
+
+Aceita filtro opcional `status`. A lista contém protocolo, título, categoria, severidade, status e data; não retorna loja, turno, telefone nem dados de identificação.
+
+```json
+[{"protocolo":"AN-1048","titulo":"Tratamento inadequado durante o turno","categoria":"HUMILHACAO","severidade":"ALTA","status":"NOVO","criadoEm":"2026-10-27T09:24:00-03:00","loja":"Centro","turno":"Noite","conteudo":"Orientações foram feitas diante da equipe em tom ofensivo.","historico":[{"titulo":"Relato recebido","data":"2026-10-27T09:24:00-03:00","descricao":"Registro recebido pelo canal confidencial."}]}]
+```
+
+Loja, turno e conteúdo detalhado são retornados para exibição somente no detalhe e sob autorização RH.
+
+## `PATCH /api/relatos/{protocolo}` (futuro)
+
+Na Fase 2, mudança de status e observação interna existem somente na memória do navegador. A integração futura aceitará:
+
+```json
+{"status":"EM_ANALISE","observacaoInterna":"Análise iniciada pelo RH."}
+```
+
+Status possíveis: `NOVO`, `EM_ANALISE`, `CONCLUIDO`.
 
 ## `GET /api/bem-estar`
 
