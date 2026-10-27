@@ -1,8 +1,11 @@
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const SVG_ELEMENTS = new Set(["svg", "use", "rect", "line", "text", "polyline", "circle", "path", "g", "polygon"]);
+
 function h(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
+  const node = SVG_ELEMENTS.has(tag) ? document.createElementNS(SVG_NAMESPACE, tag) : document.createElement(tag);
   for (const [key, value] of Object.entries(attrs || {})) {
     if (value === null || value === undefined || value === false) continue;
-    if (key === "className") node.className = value;
+    if (key === "className") node.setAttribute("class", value);
     else if (key === "dataset") Object.assign(node.dataset, value);
     else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2).toLowerCase(), value);
     else if (key === "value" || key === "checked" || key === "disabled") node[key] = value;

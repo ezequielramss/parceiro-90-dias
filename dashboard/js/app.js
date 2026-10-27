@@ -5,6 +5,7 @@ import { renderAlerts } from "./views/alertas.js";
 import { renderOverview } from "./views/visao-geral.js";
 import { renderRelatos } from "./views/relatos.js";
 import { renderWellbeing } from "./views/bem-estar.js";
+import { renderRelatorios } from "./views/relatorios.js";
 
 const routes = [
   ["#/visao-geral", "Visão geral", "grid"], ["#/funcionarios", "Funcionários", "people"],
@@ -45,6 +46,7 @@ function render() {
   else if (path === "#/alertas") content = renderAlerts({ data: state.data, query: state.query, selectedId: state.alertId, onSelect: (id) => { state.alertId = id; state.detailsOpen = true; render(); }, detailsOpen: state.detailsOpen, onClose: closeDetails });
   else if (path === "#/relatos") content = renderRelatos({ profile: state.profile, reports: state.profile === "RH" ? state.pageData[path]?.relatos || [] : [], query: state.query, selectedId: state.reportId, detailsOpen: state.detailsOpen, onSelect: (id) => { state.reportId = id; state.detailsOpen = true; render(); }, onClose: closeDetails, onUpdate: render });
   else if (path === "#/bem-estar") content = renderWellbeing({ data: { bemestar: state.pageData[path].bemestar, colaboradores: state.data.colaboradores }, profile: state.profile, query: state.query, selectedId: state.wellbeingId, detailsOpen: state.detailsOpen, onSelect: (id) => { state.wellbeingId = id; state.detailsOpen = true; render(); }, onClose: closeDetails });
+  else if (path === "#/relatorios") content = renderRelatorios({ serie: state.pageData[path].serie, colaboradores: state.data.colaboradores, kpis: state.data.kpis, onUpdate: render });
   else content = placeholder(active?.[1] || "Página", path);
   root.replaceChildren(sidebar, h("main", { className: "main" }, topbar, mobileNav, h("div", { className: "content" }, content)));
 }

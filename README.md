@@ -16,12 +16,13 @@ Na pasta `parceiro-90-dias/`, execute `python -m http.server 8000 --directory da
 
 ## Convenções
 
-- A navegação usa hash routes; telas futuras exibem um placeholder.
+- A navegação usa hash routes para Visão geral, Funcionários, Alertas, Relatos, Bem-estar e Relatórios. A rota padrão é `#/visao-geral`.
 - `dashboard/js/api.js` define `USE_MOCK`. Com `true`, carrega JSON local; com `false`, acessa somente `/api/*`.
+- O perfil de demonstração é `MOCK_PERFIL` em `dashboard/js/api.js` (`RH` ou `GERENTE`). O perfil GERENTE não solicita dados de relatos confidenciais.
 - Conteúdo dinâmico é inserido com `textContent` e `createElement` via helper `h()`; não use `innerHTML` para dados.
 - Ícones e fontes são servidos localmente. Mantenha os exemplos de pessoas e alertas como fictícios.
 - Os mocks deste repositório são exclusivamente fictícios e não representam colaboradores reais.
 
-## Fase 1
+## Fases entregues
 
-Entregues as telas Funcionários e Alertas. Visão geral, Relatos, Bem-estar e Relatórios estão reservados para a Fase 2.
+Visão geral, Funcionários, Alertas, Relatos confidenciais, Bem-estar e Relatórios. Alterações de status e observações dos relatos são locais; geração de análise usa um mock com atraso simulado. Não existe integração real com backend nesta entrega.

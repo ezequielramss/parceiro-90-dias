@@ -5,7 +5,7 @@ Todos os endpoints usam JSON UTF-8. Erros devem retornar `{ "erro": { "codigo": 
 ## `GET /api/kpis`
 
 ```json
-{"emJornada":38,"precisamAtencao":7,"alertasAbertos":3,"atendidos":6,"semRetorno24h":3,"taxaResposta10d":81,"tempoMedioRetornoHoras":6.4}
+{"emJornada":38,"precisamAtencao":7,"alertasAbertos":3,"atendidos":6,"semRetorno24h":3,"taxaResposta10d":81,"tempoMedioRetornoHoras":6.4,"insight":{"titulo":"Check-ins no início da jornada","resumo":"A equipe registrou pedidos de orientação nos primeiros 30 dias."}}
 ```
 
 ## `GET /api/colaboradores`
@@ -71,13 +71,19 @@ Para o perfil RH, fornece distribuição e acompanhamentos com categoria e resum
 ## `GET /api/kpis/serie-mensal`
 
 ```json
-{"itens":[{"mes":"2026-08","emJornada":32,"precisamAtencao":6},{"mes":"2026-09","emJornada":35,"precisamAtencao":7}]}
+{"itens":[{"mes":"Mai","estavel":23,"atencao":10,"prioridade":5,"presenca":92},{"mes":"Jun","estavel":25,"atencao":9,"prioridade":5,"presenca":93},{"mes":"Jul","estavel":27,"atencao":8,"prioridade":4,"presenca":94},{"mes":"Ago","estavel":28,"atencao":7,"prioridade":4,"presenca":94},{"mes":"Set","estavel":29,"atencao":6,"prioridade":4,"presenca":95},{"mes":"Out","estavel":31,"atencao":5,"prioridade":2,"presenca":95}]}
 ```
 
 ## `POST /api/relatorios/gerar` (futuro: IA)
 
 ```json
-{"periodo":"90d","escopo":"loja","loja":"Centro","observacoes":"Pontos a considerar"}
+{"escopo":"FUNCIONARIO","publico":"DIRECAO","colaboradorId":"c03"}
 ```
 
-Resposta futura: `202 Accepted` com identificador de processamento. Revisão humana é necessária antes de compartilhar o relatório.
+A resposta contém `resumoExecutivo`, `pontosAtencao[]` e `sugestoes[]`.
+
+```json
+{"resumoExecutivo":"A equipe mantém indicadores de presença consistentes.","pontosAtencao":["Há sinais de cansaço em parte da equipe."],"sugestoes":["Realizar conversas individuais de acompanhamento."]}
+```
+
+No protótipo, `USE_MOCK` retorna `relatorio-exemplo.json` após atraso simulado de aproximadamente 800 ms. A integração futura deve omitir nomes quando `publico` for `DIRECAO`, aplicar autorização no servidor e sinalizar que a análise precisa de revisão humana.

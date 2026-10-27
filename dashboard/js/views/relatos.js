@@ -13,7 +13,7 @@ function renderRelatos({ profile, reports = [], query = "", selectedId, detailsO
   const term = query.toLocaleLowerCase("pt-BR");
   const visible = reports.filter((report) => {
     const status = getLocalStatus(report);
-    return (statusFilter === "Todos" || statusText[status] === statusFilter) && `${report.protocolo} ${report.titulo} ${report.categoria}`.toLocaleLowerCase("pt-BR").includes(term);
+    return (statusFilter === "Todos" || statusText[status] === statusFilter) && `${report.protocolo} ${report.titulo} ${categoryLabel(report.categoria)}`.toLocaleLowerCase("pt-BR").includes(term);
   });
   const heading = h("section", { className: "page-heading" }, h("div", {}, h("span", { className: "eyebrow" }, "CANAL CONFIDENCIAL · ACESSO EXCLUSIVO DO RH"), h("h1", {}, "Relatos confidenciais"), h("p", {}, "Receba e acompanhe manifestações com confidencialidade.")), h("div", { className: "report-security" }, icon("lock", 16), h("span", {}, "Acesso restrito ao RH")));
   const list = h("article", { className: "panel reports-queue" },
