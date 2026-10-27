@@ -1,0 +1,7 @@
+*, *::before, *::after { box-sizing: border-box; }
+h1,h2,h3,h4,h5,h6,p,figure { margin: 0; }
+button,input,select,textarea { font: inherit; color: inherit; }
+button { border: 0; background: none; cursor: pointer; }
+img,svg { display: block; }
+ul,ol { list-style: none; margin: 0; padding: 0; }
+:focus-visible { outline: 3px solid #b48100; outline-offset: 3px; }
