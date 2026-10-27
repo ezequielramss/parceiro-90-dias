@@ -62,10 +62,10 @@ Status possíveis: `NOVO`, `EM_ANALISE`, `CONCLUIDO`.
 
 ## `GET /api/bem-estar`
 
-Fornece categoria e resumo neutro descritivo, nunca a mensagem literal do colaborador.
+Para o perfil RH, fornece distribuição e acompanhamentos com categoria e resumo neutro descritivo, nunca a mensagem literal. O backend limita o perfil gerente a categorias e sugestões, sem identificadores, histórico, resumo ou contato individual.
 
 ```json
-[{"categoria":"Sobrecarga","resumo":"Relatos indicam necessidade de apoio durante horários de pico.","periodo":"2026-10"}]
+{"distribuicaoCategorias":[{"categoria":"Estável","quantidade":16},{"categoria":"Sobrecarga","quantidade":6}],"pessoas":[{"colaboradorId":"c03","categoria":"Sobrecarga","ultimoContato":"2026-10-26T17:45:00-03:00","tendencia":"mais frequente nos últimos 7 dias","sugestao":"Vale conversar sobre a distribuição das tarefas","historico":[{"tipo":"CHECKIN","categoria":"Sobrecarga","resumoNeutro":"A pessoa pediu apoio para organizar as tarefas nos horários de maior movimento.","data":"2026-10-26T17:45:00-03:00","tag":"Acompanhamento"}]}]}
 ```
 
 ## `GET /api/kpis/serie-mensal`

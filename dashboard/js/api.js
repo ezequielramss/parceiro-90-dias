@@ -38,7 +38,15 @@ function getRelatos(params = {}) {
   if (params.status) query.set("status", params.status);
   return request(`/api/relatos${query.size ? `?${query}` : ""}`, "relatos.json");
 }
-function getBemestar() { return request("/api/bem-estar", "bemestar.json"); }
+async function getBemestar(profile = MOCK_PERFIL) {
+  if (USE_MOCK && profile === "GERENTE") return request("/api/bem-estar", "bemestar-gerente.json");
+  const data = await request("/api/bem-estar", "bemestar.json");
+  if (profile !== "GERENTE") return data;
+  return {
+    distribuicaoCategorias: data.distribuicaoCategorias,
+    pessoas: data.pessoas.map(({ categoria, sugestao }) => ({ categoria, sugestao }))
+  };
+}
 function getSerieMensal() { return request("/api/kpis/serie-mensal", "serie-mensal.json"); }
 async function gerarRelatorio({ escopo, publico, colaboradorId }) {
   if (!USE_MOCK) return request("/api/relatorios/gerar", undefined, {
