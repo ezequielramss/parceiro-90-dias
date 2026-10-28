@@ -3,3 +3,9 @@ dist/
 .env
 referencia/
 .DS_Store
+target/
+.idea/
+.vscode/
+*.log
+.env.*
+!.env.example
