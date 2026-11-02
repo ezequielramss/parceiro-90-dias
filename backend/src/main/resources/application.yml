@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: parceiro-backend
+  config:
+    # Em desenvolvimento, lê o .env da pasta backend/ se existir.
+    # Variáveis de ambiente reais têm precedência sobre ele.
+    import: optional:file:.env[.properties]
+  threads:
+    virtual:
+      enabled: true
+
+# Sem valor padrão de propósito: a aplicação não sobe se faltar alguma.
+whatsapp:
+  token: ${WHATSAPP_TOKEN}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
+  verify-token: ${WHATSAPP_VERIFY_TOKEN}
+  app-secret: ${WHATSAPP_APP_SECRET}
+  graph-version: ${WHATSAPP_GRAPH_VERSION}
+  base-url: https://graph.facebook.com
+  connect-timeout: 3s
+  read-timeout: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  structured:
+    format:
+      console: ecs

@@ -1,0 +1,17 @@
+target/
+.idea/
+*.iml
+.vscode/
+
+# Segredos: nunca versionar. Só o .env.example (sem valores) entra no Git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+secrets/
+application-local.yml
+application-local.properties
