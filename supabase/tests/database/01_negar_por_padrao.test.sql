@@ -59,6 +59,8 @@ cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']) as 
 cross join lateral (
   select attname from pg_attribute
   where attrelid = format('public.%I', t.tablename)::regclass and attnum > 0 and not attisdropped
+    -- "set id = id" em identity GENERATED ALWAYS falha antes da checagem de permissão.
+    and attidentity <> 'a' and attgenerated = ''
   order by attnum limit 1
 ) a
 where t.schemaname = 'public';
