@@ -1,64 +1,98 @@
 # Backend — Parceiro dos 90 dias
 
-API em Java 21 + Spring Boot 3 (Maven). Nesta etapa (Etapa 0) ela só recebe o webhook da
-WhatsApp Cloud API e responde com um eco (`Recebi: <texto>`) para provar o fluxo de ponta a ponta.
+API em Java 21 + Spring Boot 3 (Maven). Recebe o webhook da WhatsApp Cloud API, valida a
+assinatura, grava as mensagens no Postgres do Supabase e conduz o aceite (H02).
 
-Ainda **não** existem validação de assinatura (`X-Hub-Signature-256`), idempotência nem banco:
-isso entra na Etapa 1.
+O que já existe:
+
+- **Etapa 0 (H01, H38):** verificação do webhook, `WhatsAppClient` e segredos só por ambiente.
+- **Etapa 1 (H31, H02):** assinatura `X-Hub-Signature-256`, idempotência por `wamid`,
+  processamento assíncrono, aceite e "parar".
+
+Ainda **não** existem classificação de relatos nem agendador de check-ins.
 
 ## Estrutura
 
 ```
-backend/
-├── .env.example              nomes das variáveis, sem valores
-├── pom.xml / mvnw            build (Maven Wrapper, não precisa instalar Maven)
-└── src/main/java/br/com/kallopolli/parceiro/
-    ├── ParceiroApplication.java
-    └── whatsapp/
-        ├── WhatsAppProperties.java          configuração lida do ambiente (falha se faltar)
-        ├── WhatsAppWebhookController.java   GET (verificação) e POST (eventos) em /webhook/whatsapp
-        ├── EcoService.java                  responde "Recebi: <texto>" fora da thread do webhook
-        ├── WhatsAppClient.java              envio pela Graph API com RestClient e timeout
-        └── WhatsAppClientException.java     erro sem token nem conteúdo
+backend/src/main/java/br/com/kallopolli/parceiro/
+├── whatsapp/
+│   ├── WhatsAppWebhookController.java   GET (verificação) e POST (eventos) em /webhook/whatsapp
+│   ├── AssinaturaWebhook.java           HMAC-SHA256 do corpo bruto com o App Secret, tempo constante
+│   ├── ProcessadorMensagens.java        @Async: colaborador → grava (wamid único) → fluxo de aceite
+│   ├── MensagemRecebida.java            wamid, remetente, tipo e texto (toString sem número e texto)
+│   ├── MensageiroWhatsApp.java          envia texto e grava a mensagem de saída
+│   └── WhatsAppClient.java              Graph API com RestClient, timeout e erros sem token
+├── consentimento/
+│   ├── FluxoConsentimento.java          "parar", "aceito" e pedido de aceite
+│   ├── EnvioAcompanhamento.java         única porta para check-ins: só envia com aceite ativo
+│   ├── Textos.java                      termo v1 e mensagens do fluxo
+│   └── TextoNormalizado.java            sem acento, minúsculas, sem pontuação
+└── jornada/
+    ├── *Repository.java                 interfaces (colaboradores, consentimentos, mensagens, auditoria)
+    ├── jdbc/JdbcRepositorios.java       implementação com JdbcClient sobre as tabelas da Etapa 1
+    └── BancoProperties.java / BancoConfig.java   conexão lida do ambiente
 ```
+
+As tabelas vêm de `supabase/migrations/20261102200100_jornada_colaboradores.sql`.
+
+## Como uma mensagem é tratada
+
+1. O POST lê o corpo **bruto** e confere `X-Hub-Signature-256` (`sha256=` + HMAC-SHA256 em hex
+   com `WHATSAPP_APP_SECRET`). Se a assinatura estiver ausente ou inválida, responde **401** e
+   não processa nada.
+2. Com a assinatura válida, responde **200 na hora** e entrega cada mensagem ao
+   `ProcessadorMensagens`, que roda em outra thread.
+3. O processador busca o colaborador ativo pelo telefone (`+` + número da Meta). Se o número
+   não estiver cadastrado pelo RH, a mensagem é ignorada: não é gravada nem respondida.
+4. Grava a mensagem com `on conflict (wamid) do nothing`. Se o `wamid` já existia, a
+   mensagem é ignorada: nada novo é gravado e nenhuma resposta é enviada.
+5. Aplica o fluxo de aceite:
+   - **"parar"**: aceita qualquer caixa, com ou sem acento ou pontuação. Registra a retirada,
+     grava na auditoria e confirma por texto.
+   - **Sem aceite ativo e "aceito"**: registra o aceite com o texto do termo v1, grava na
+     auditoria e confirma.
+   - **Sem aceite ativo e qualquer outra mensagem**: envia o pedido de aceite com o termo.
+   - **Com aceite ativo**: a mensagem fica gravada para a classificação, que é a próxima história.
+6. Toda mensagem processada gera o log `mensagem processada`, com `wamid` e `resultado`. Uma
+   falha gera `falha ao processar mensagem`, só com `wamid` e o nome da exceção.
+
+Mensagens de acompanhamento só saem por `EnvioAcompanhamento.enviar(...)`, que recusa quem
+não tem aceite ativo. O agendador da próxima etapa deve usar essa classe.
 
 ## Segredos
 
-Toda configuração sensível vem de variáveis de ambiente. Nenhuma tem valor padrão: sem elas
-a aplicação não sobe e diz qual falta.
+Toda configuração sensível vem de variáveis de ambiente. Nenhuma tem valor padrão: sem elas a
+aplicação não sobe e diz qual falta.
 
 | Variável | O que é |
 |---|---|
-| `WHATSAPP_TOKEN` | token de acesso da Graph API (de preferência de um usuário do sistema, que não expira) |
-| `WHATSAPP_PHONE_NUMBER_ID` | ID do número de telefone no WhatsApp Manager (não é o número em si) |
+| `WHATSAPP_TOKEN` | token de acesso da Graph API (de preferência de um usuário do sistema) |
+| `WHATSAPP_PHONE_NUMBER_ID` | ID do número de telefone no WhatsApp Manager |
 | `WHATSAPP_VERIFY_TOKEN` | texto que você inventa e repete no painel da Meta ao cadastrar o webhook |
-| `WHATSAPP_APP_SECRET` | chave secreta do app (será usada na Etapa 1 para validar a assinatura) |
+| `WHATSAPP_APP_SECRET` | chave secreta do app; valida a assinatura de cada POST |
 | `WHATSAPP_GRAPH_VERSION` | versão da Graph API, por exemplo `v23.0` |
+| `DATABASE_URL` | `jdbc:postgresql://host:porta/postgres` do Supabase |
+| `DATABASE_USER` | usuário do banco (conexão de servidor; anon e authenticated não têm acesso) |
+| `DATABASE_PASSWORD` | senha do banco |
 
 Para desenvolvimento, copie `.env.example` para `.env` **dentro de `backend/`** e preencha.
-O `.env` está no `.gitignore` e é lido automaticamente ao rodar a partir de `backend/`.
-Use `CHAVE=valor`, sem aspas. Variáveis de ambiente de verdade têm precedência sobre o `.env`.
+O `.env` está no `.gitignore` e é lido automaticamente. Use `CHAVE=valor`, sem aspas.
 
-Os logs são JSON (formato ECS) e trazem só o tipo e o `wamid` das mensagens. Nunca trazem
-token, texto, telefone ou nome. Só `/actuator/health` é exposto.
+Os logs são JSON (ECS) e trazem só tipo, `wamid` e resultado. Nunca trazem token, segredo,
+texto, telefone ou nome. Só `/actuator/health` é exposto.
 
 ## Rodar local
 
-Precisa do JDK 21 (`JAVA_HOME` apontando para ele). No PowerShell, a partir de `backend/`:
+Precisa do JDK 21 e do Supabase local com as migrações (veja a raiz do repositório). No
+PowerShell, a partir de `backend/`:
 
 ```powershell
 Copy-Item .env.example .env    # depois preencha o .env
 .\mvnw.cmd spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`. Conferir:
-
-```powershell
-curl.exe http://localhost:8080/actuator/health
-curl.exe "http://localhost:8080/webhook/whatsapp?hub.mode=subscribe&hub.verify_token=<seu verify token>&hub.challenge=123"
-```
-
-O primeiro deve responder `{"status":"UP"}` e o segundo, `123`.
+Para usar o banco local, preencha o `.env` com `DATABASE_URL=jdbc:postgresql://127.0.0.1:54322/postgres`
+e o usuário e a senha que o `supabase status` mostra.
 
 ## Testes
 
@@ -66,37 +100,39 @@ O primeiro deve responder `{"status":"UP"}` e o segundo, `123`.
 .\mvnw.cmd test
 ```
 
-Os testes usam valores falsos e uma Graph API simulada em `127.0.0.1`. Nada sai da máquina e
-nenhum segredo real é necessário. Eles cobrem:
+Os testes do webhook usam segredos falsos, repositórios em memória e uma Graph API simulada em
+`127.0.0.1`. Nada sai da máquina. Eles cobrem:
 
-- GET com verify token certo, errado, modo errado e sem parâmetros;
-- POST com payloads desconhecidos, inválidos, vazios e de status (sempre 200);
-- eco de ponta a ponta (URL, header `Authorization` e corpo enviados à Graph API);
-- token, texto e telefone ausentes dos logs, inclusive quando a Meta devolve erro repetindo o token;
-- timeout da Graph API vira exceção sem token;
-- aplicação não sobe sem as variáveis do WhatsApp.
+- **assinatura**: válida, ausente, com outro segredo, corpo alterado depois de assinado,
+  JSON reformatado e cabeçalho malformado (os inválidos dão 401 e nada é processado);
+- **idempotência**: o mesmo `wamid` duas vezes gera um registro e uma resposta;
+- **aceite**: pedido de aceite, "aceito", "parar" em 9 variações (caixa, acento, pontuação,
+  espaços, quebra de linha), frases que só contêm "parar", novo aceite depois de parar,
+  número não cadastrado e acompanhamento bloqueado sem aceite;
+- **logs**: token, App Secret, verify token, senha do banco, texto e telefone ausentes,
+  inclusive em falha de processamento, erro da Meta, assinatura inválida e timeout;
+- **subida**: a aplicação não sobe sem as variáveis do WhatsApp ou do banco.
+
+Os repositórios JDBC têm teste próprio contra o Postgres. Ele roda só com as variáveis de teste
+definidas, e cada caso é desfeito no fim:
+
+```powershell
+$env:TEST_DATABASE_URL = "jdbc:postgresql://127.0.0.1:54322/postgres"
+$env:TEST_DATABASE_USER = "<usuário do supabase status>"
+$env:TEST_DATABASE_PASSWORD = "<senha do supabase status>"
+.\mvnw.cmd test -Dtest=JdbcRepositoriosTest
+```
 
 ## Expor a porta com um túnel
 
-A Meta só chama URLs públicas com HTTPS. Em desenvolvimento, use um túnel até a porta 8080.
-
-**cloudflared** (não pede conta para túnel rápido):
+A Meta só chama URLs públicas com HTTPS. Em desenvolvimento, use um túnel até a porta 8080:
 
 ```powershell
-winget install --id Cloudflare.cloudflared
-cloudflared tunnel --url http://localhost:8080
+cloudflared tunnel --url http://localhost:8080    # ou: ngrok http 8080
 ```
 
-**ngrok** (pede conta gratuita e `ngrok config add-authtoken`):
-
-```powershell
-winget install --id Ngrok.Ngrok
-ngrok http 8080
-```
-
-Os dois mostram uma URL `https://...`. A URL do webhook é essa URL + `/webhook/whatsapp`.
-No túnel rápido do cloudflared e no ngrok gratuito a URL muda a cada execução, então é
-preciso recadastrar no painel da Meta sempre que reiniciar o túnel.
+A URL do webhook é a URL `https://...` mostrada + `/webhook/whatsapp`. No túnel rápido, ela muda
+a cada execução.
 
 ## Cadastrar o webhook no painel da Meta
 
@@ -104,10 +140,9 @@ preciso recadastrar no painel da Meta sempre que reiniciar o túnel.
 2. Em **Webhook**, clique em **Editar**:
    - **URL de callback**: `https://<url-do-tunel>/webhook/whatsapp`
    - **Token de verificação**: o mesmo valor de `WHATSAPP_VERIFY_TOKEN`
-3. Clique em **Verificar e salvar**. A Meta faz o GET. A API responde o `hub.challenge` e loga
-   `webhook verificado pela Meta`.
-4. Em **Campos do webhook**, assine o campo **messages**.
-5. Enquanto o app estiver em modo de desenvolvimento, só números cadastrados como destinatários
-   de teste (em **Configuração da API**) recebem respostas. Mande uma mensagem de um desses
-   números para o número do app: o log mostra `mensagem recebida` e `eco enviado`, e o celular
-   recebe `Recebi: <texto>`.
+3. Clique em **Verificar e salvar** e depois assine o campo **messages**.
+4. O `WHATSAPP_APP_SECRET` precisa ser o **App Secret** do mesmo app (Configurações do app →
+   Básico). Se não for, todo POST da Meta vai dar 401.
+5. Cadastre o colaborador de teste na tabela `colaboradores`, com o telefone em E.164. Enquanto
+   o app estiver em modo de desenvolvimento, esse número também precisa estar na lista de
+   destinatários de teste da Meta.

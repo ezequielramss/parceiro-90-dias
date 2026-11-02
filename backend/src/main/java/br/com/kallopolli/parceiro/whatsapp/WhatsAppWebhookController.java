@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,8 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Webhook da WhatsApp Cloud API.
  *
- * <p>Etapa 0: sem validação de assinatura (X-Hub-Signature-256), sem idempotência e sem banco.
- * Os logs trazem só tipo e wamid; nunca texto, número de telefone ou nome.
+ * <p>O POST valida a assinatura sobre o corpo bruto antes de qualquer conversão,
+ * responde 200 na hora e entrega cada mensagem ao {@link ProcessadorMensagens},
+ * que roda em outra thread. Os logs trazem só tipo e wamid; nunca texto, número ou nome.
  */
 @RestController
 @RequestMapping("/webhook/whatsapp")
@@ -29,12 +31,18 @@ public class WhatsAppWebhookController {
 
     private final WhatsAppProperties props;
     private final ObjectMapper objectMapper;
-    private final EcoService ecoService;
+    private final AssinaturaWebhook assinatura;
+    private final ProcessadorMensagens processador;
 
-    public WhatsAppWebhookController(WhatsAppProperties props, ObjectMapper objectMapper, EcoService ecoService) {
+    public WhatsAppWebhookController(
+            WhatsAppProperties props,
+            ObjectMapper objectMapper,
+            AssinaturaWebhook assinatura,
+            ProcessadorMensagens processador) {
         this.props = props;
         this.objectMapper = objectMapper;
-        this.ecoService = ecoService;
+        this.assinatura = assinatura;
+        this.processador = processador;
     }
 
     /** Desafio de verificação que a Meta faz ao cadastrar a URL do webhook. */
@@ -51,12 +59,19 @@ public class WhatsAppWebhookController {
         return ResponseEntity.status(403).build();
     }
 
-    /** Recebe eventos. Sempre 200 para a Meta não reenviar; o trabalho pesado vai para outra thread. */
+    /** Recebe eventos. 401 sem processar se a assinatura falhar; senão 200 imediato. */
     @PostMapping(consumes = MediaType.ALL_VALUE)
-    public ResponseEntity<Void> receber(@RequestBody(required = false) String corpo) {
+    public ResponseEntity<Void> receber(
+            @RequestHeader(name = "X-Hub-Signature-256", required = false) String cabecalhoAssinatura,
+            @RequestBody(required = false) byte[] corpo) {
+        if (!assinatura.valida(corpo, cabecalhoAssinatura)) {
+            log.warn("assinatura do webhook ausente ou inválida");
+            return ResponseEntity.status(401).build();
+        }
+
         JsonNode raiz;
         try {
-            raiz = objectMapper.readTree(corpo == null ? "" : corpo);
+            raiz = objectMapper.readTree(corpo == null ? new byte[0] : corpo);
         } catch (Exception e) {
             log.warn("payload do webhook não é JSON válido");
             return ResponseEntity.ok().build();
@@ -70,7 +85,7 @@ public class WhatsAppWebhookController {
             for (JsonNode change : entry.path("changes")) {
                 JsonNode valor = change.path("value");
                 for (JsonNode mensagem : valor.path("messages")) {
-                    tratarMensagem(mensagem);
+                    receberMensagem(MensagemRecebida.de(mensagem));
                 }
                 for (JsonNode status : valor.path("statuses")) {
                     log.atInfo().setMessage("status recebido")
@@ -83,18 +98,13 @@ public class WhatsAppWebhookController {
         return ResponseEntity.ok().build();
     }
 
-    private void tratarMensagem(JsonNode mensagem) {
-        String wamid = mensagem.path("id").asText(null);
-        String tipo = mensagem.path("type").asText("desconhecido");
+    private void receberMensagem(MensagemRecebida mensagem) {
         log.atInfo().setMessage("mensagem recebida")
-                .addKeyValue("wamid", wamid)
-                .addKeyValue("tipo", tipo)
+                .addKeyValue("wamid", mensagem.wamid())
+                .addKeyValue("tipo", mensagem.tipo())
                 .log();
-
-        String de = mensagem.path("from").asText(null);
-        String texto = mensagem.path("text").path("body").asText(null);
-        if ("text".equals(tipo) && de != null && texto != null) {
-            ecoService.responder(wamid, de, texto);
+        if (mensagem.wamid() != null && mensagem.de() != null) {
+            processador.processar(mensagem);
         }
     }
 

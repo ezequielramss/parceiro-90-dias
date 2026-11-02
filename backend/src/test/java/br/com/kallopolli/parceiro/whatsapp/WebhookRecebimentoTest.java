@@ -1,20 +1,13 @@
 package br.com.kallopolli.parceiro.whatsapp;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 
 class WebhookRecebimentoTest extends WebhookTestBase {
-
-    @Autowired
-    MockMvc mvc;
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -27,9 +20,8 @@ class WebhookRecebimentoTest extends WebhookTestBase {
             "isto nao e json",
             ""
     })
-    void payloadDesconhecidoOuInvalidoResponde200(String corpo) throws Exception {
-        mvc.perform(post("/webhook/whatsapp").contentType(MediaType.APPLICATION_JSON).content(corpo))
-                .andExpect(status().isOk());
+    void payloadAssinadoDesconhecidoOuInvalidoResponde200(String corpo) throws Exception {
+        mvc.perform(postAssinado(corpo)).andExpect(status().isOk());
     }
 
     @Test

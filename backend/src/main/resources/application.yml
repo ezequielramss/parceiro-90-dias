@@ -10,6 +10,12 @@ spring:
       enabled: true
 
 # Sem valor padrão de propósito: a aplicação não sobe se faltar alguma.
+parceiro:
+  banco:
+    url: ${DATABASE_URL}
+    usuario: ${DATABASE_USER}
+    senha: ${DATABASE_PASSWORD}
+
 whatsapp:
   token: ${WHATSAPP_TOKEN}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
