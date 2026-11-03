@@ -161,13 +161,55 @@ recusa quem não tem aceite ativo.
   (a tabela exige colaborador); os wamids recentes ficam em memória (`WamidsRecentes`). O toque
   em botão é idempotente pela própria regra.
 - Fora desta etapa: áudio, lembrete de 24 horas e subida ao RH, retorno ao colaborador após o
-  atendimento, check-ins depois do dia 10, regra do gerente citado no relato, purga dos 90
-  dias e painel com login.
+  atendimento, check-ins depois do dia 10 e regra do gerente citado no relato.
+
+## Painel (dashboard)
+
+O backend serve `dashboard/` na raiz. O build copia a pasta para o classpath (`static/`), então
+ela continua sendo a fonte única. Os arquivos estáticos são públicos e não têm dados; tudo em
+`/api/**` exige login. O código fica em `painel/`.
+
+- **Login:** `POST /api/login` com `{"email","senha"}`. O backend chama o Supabase Auth
+  (`/auth/v1/token?grant_type=password`) com a chave publicável; o navegador nunca vê a chave.
+  - O token vai só num cookie `parceiro_sessao` (HttpOnly, SameSite=Strict, Path=/, com a
+    validade do token). O cookie é Secure, exceto no perfil `local`.
+  - Erro de login dá sempre "E-mail ou senha incorretos.".
+  - `POST /api/logout` apaga o cookie.
+  - Não há cadastro, recuperação de senha nem renovação.
+- **A cada chamada:** o `FiltroPainel` confere a assinatura pelo JWKS do projeto
+  (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, ES256 ou RS256, em cache por 10 minutos). Ele
+  também confere o emissor, a validade e a audience `authenticated`. Depois busca o usuário em
+  `acessos_dashboard`.
+  - Sem cookie, ou com token inválido ou vencido: 401.
+  - Usuário sem linha em `acessos_dashboard`: 403.
+  - Papel e loja vêm só dessa tabela.
+- **Rotas de leitura:** ver `docs/contrato-api.md`. O filtro de papel e loja fica no WHERE de
+  `JdbcPainelRepositorios`.
+  - O gerente vê só a própria loja e só os alertas que receberia pelo WhatsApp.
+  - O gerente nunca recebe motivo, texto, categorias restritas nem a ligação entre alerta e
+    pessoa (H17).
+  - `/api/relatos` é só do RH.
+- **Cabeçalhos:** `Content-Security-Policy` (só a própria origem, sem script inline),
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
+  e `Cache-Control: no-store` em `/api/**`.
+- **Sem `SUPABASE_URL` ou `SUPABASE_PUBLISHABLE_KEY`:** o painel responde 503 e o WhatsApp
+  continua funcionando.
+
+### Retenção de 90 dias
+
+O termo de participação diz que os relatos ficam guardados por até 90 dias. Todo dia às 3h (São
+Paulo), `RetencaoRelatos` apaga o texto e o motivo dos relatos criados há mais de 90 dias. O
+prazo conta da data do relato. A mesma rotina apaga o texto das mensagens do mesmo período: a
+mensagem do relato e a confirmação "Entendi assim: ..." repetem o relato e o motivo.
+
+Categoria, destino, datas e contagens ficam para os indicadores. A auditoria e o log registram
+só as quantidades. Para desligar, use `parceiro.retencao.ativo=false`.
 
 ## Segredos
 
 Toda configuração sensível vem de variáveis de ambiente. Nenhuma tem valor padrão: sem elas a
-aplicação não sobe e diz qual falta.
+aplicação não sobe e diz qual falta. As duas do painel são a exceção: sem elas, só o painel fica
+indisponível.
 
 | Variável | O que é |
 |---|---|
@@ -181,6 +223,8 @@ aplicação não sobe e diz qual falta.
 | `DATABASE_PASSWORD` | senha do banco |
 | `GEMINI_API_KEY` | chave do Google AI Studio para classificar relatos; vai só no cabeçalho `x-goog-api-key` |
 | `GEMINI_MODEL` | modelo do Gemini, por exemplo `gemini-3.1-flash-lite` (ver `ia/README.md`) |
+| `SUPABASE_URL` | *(opcional)* URL do projeto, `https://<ref>.supabase.co`; sem ela o painel responde 503 |
+| `SUPABASE_PUBLISHABLE_KEY` | *(opcional)* chave publicável (`sb_publishable_...`), usada só pelo backend no login |
 
 Para desenvolvimento, copie `.env.example` para `.env` **dentro de `backend/`** e preencha.
 O `.env` está no `.gitignore` e é lido automaticamente. Use `CHAVE=valor`, sem aspas.
@@ -201,6 +245,14 @@ Copy-Item .env.example .env    # depois preencha o .env
 Para usar o banco local, preencha o `.env` com `DATABASE_URL=jdbc:postgresql://127.0.0.1:54322/postgres`
 e o usuário e a senha que o `supabase status` mostra.
 
+Para o painel em `http://localhost:8080`, sem HTTPS, ative o perfil local, que desliga o
+cookie Secure:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "local"
+.\mvnw.cmd spring-boot:run
+```
+
 ## Testes
 
 ```powershell
@@ -219,6 +271,21 @@ Os testes do webhook usam segredos falsos, repositórios em memória e uma Graph
 - **logs**: token, App Secret, verify token, senha do banco, texto e telefone ausentes,
   inclusive em falha de processamento, erro da Meta, assinatura inválida e timeout;
 - **subida**: a aplicação não sobe sem as variáveis do WhatsApp ou do banco.
+- **painel**: um Supabase Auth falso (`SupabaseAuthFalso`) com um par de chaves gerado no
+  teste e JWKS próprio. Os testes cobrem:
+  - login certo e errado (mesma mensagem), sem acesso (403) e Supabase fora do ar (503);
+  - token com assinatura errada, vencido, de outro emissor, de outra audience ou sem
+    assinatura (401);
+  - duas lojas: o gerente da loja A não vê nada da B em nenhuma rota, nem motivo nem
+    categorias restritas; `/api/relatos` dá 403 e um id da loja B dá 404;
+  - papel ou loja enviados pelo navegador são ignorados;
+  - o cookie é HttpOnly e SameSite=Strict, não há rota de escrita e os cabeçalhos de segurança
+    estão presentes;
+  - os campos batem com `dashboard/mock/`;
+  - sem `SUPABASE_URL`, o painel responde 503 e o WhatsApp continua;
+  - os logs não têm e-mail, senha, token, cookie nem chave;
+- **retenção**: relato com 89 dias mantém o texto; com 91 dias perde texto e motivo e continua
+  contando; rodar duas vezes não muda nada.
 
 Os repositórios JDBC têm teste próprio contra o Postgres. Ele roda só com as variáveis de teste
 definidas, e cada caso é desfeito no fim:
@@ -227,7 +294,7 @@ definidas, e cada caso é desfeito no fim:
 $env:TEST_DATABASE_URL = "jdbc:postgresql://127.0.0.1:54322/postgres"
 $env:TEST_DATABASE_USER = "<usuário do supabase status>"
 $env:TEST_DATABASE_PASSWORD = "<senha do supabase status>"
-.\mvnw.cmd test -Dtest=JdbcRepositoriosTest
+.\mvnw.cmd test -Dtest="Jdbc*Test"
 ```
 
 ## Expor a porta com um túnel
