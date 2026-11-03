@@ -2,6 +2,7 @@ package br.com.kallopolli.parceiro.whatsapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,8 +11,13 @@ import br.com.kallopolli.parceiro.classificacao.GeminiFalso;
 import br.com.kallopolli.parceiro.classificacao.GeminiProperties;
 import br.com.kallopolli.parceiro.classificacao.PromptClassificacao;
 import br.com.kallopolli.parceiro.jornada.BancoProperties;
+import br.com.kallopolli.parceiro.painel.Acesso;
+import br.com.kallopolli.parceiro.painel.PainelProperties;
+import br.com.kallopolli.parceiro.painel.SupabaseAuthFalso;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.web.client.RestClient;
 import org.junit.jupiter.api.Test;
@@ -148,6 +154,42 @@ class LogsSemSegredosTest extends FluxoTestBase {
         assertThat(saida.getAll()).doesNotContain(relato, COLABORADOR, GERENTE, RH, "Pessoa Ficticia",
                 "Responsavel Ficticio", br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.MOTIVO,
                 br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.ACAO);
+        semSegredos(saida);
+    }
+
+    @Test
+    void loginDoPainelNaoLogaEmailSenhaTokenNemChave(CapturedOutput saida, @Autowired PainelProperties painelProps)
+            throws Exception {
+        UUID usuario = UUID.fromString("00000000-0000-0000-0000-0000000000b1");
+        String email = "email.ficticio.log@exemplo.invalid";
+        String senha = "SENHA-FICTICIA-DE-LOG-8c2f";
+        SUPABASE.cadastrar(usuario, email, senha);
+        painel.darAcesso(new Acesso(usuario, Acesso.RH, null, "Responsavel Ficticio"));
+
+        var ok = mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"senha\":\"%s\"}".formatted(email, senha)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String cookie = ok.getHeader("Set-Cookie");
+        String token = cookie.substring(cookie.indexOf('=') + 1, cookie.indexOf(';'));
+        mvc.perform(get("/api/kpis").cookie(new Cookie("parceiro_sessao", token))).andExpect(status().isOk());
+        mvc.perform(get("/api/kpis").cookie(new Cookie("parceiro_sessao", token + "x")))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"senha\":\"errada-%s\"}".formatted(email, senha)))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + email))
+                .andExpect(status().isUnauthorized());
+        SUPABASE.responderToken(500);
+        mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"senha\":\"%s\"}".formatted(email, senha)))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(post("/api/logout").cookie(new Cookie("parceiro_sessao", token))).andExpect(status().isNoContent());
+
+        assertThat(saida.getAll()).contains("login no painel", "\"resultado\":\"OK\"",
+                "\"resultado\":\"RECUSADO_CREDENCIAIS\"", "\"resultado\":\"AUTH_INDISPONIVEL\"");
+        assertThat(saida.getAll()).doesNotContain(email, senha, token, token.substring(token.lastIndexOf('.') + 1),
+                SupabaseAuthFalso.CHAVE_PUBLICAVEL_FALSA, "parceiro_sessao=");
+        assertThat(painelProps.toString()).doesNotContain(SupabaseAuthFalso.CHAVE_PUBLICAVEL_FALSA);
         semSegredos(saida);
     }
 
