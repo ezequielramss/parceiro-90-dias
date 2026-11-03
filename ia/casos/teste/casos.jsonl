@@ -1,0 +1,72 @@
+{"id": "teste-cansaco-1", "esperada": "CANSACO", "estilo": "padrao", "texto": "Estou com muito sono, a semana inteira acordei de madrugada pra chegar a tempo."}
+{"id": "teste-cansaco-2", "esperada": "CANSACO", "estilo": "curto", "texto": "cansadão"}
+{"id": "teste-cansaco-3", "esperada": "CANSACO", "estilo": "giria", "texto": "to quebrado, véi, o corpo pedindo arrego"}
+{"id": "teste-cansaco-4", "esperada": "CANSACO", "estilo": "erro", "texto": "meus pe ta doendo muito e to sem forca"}
+{"id": "teste-cansaco-5", "esperada": "CANSACO", "estilo": "padrao", "texto": "Acho que ainda estou me acostumando com o ritmo, termino o dia esgotada."}
+{"id": "teste-cansaco-6", "esperada": "CANSACO", "estilo": "giria", "texto": "dormi 4h, to zumbi"}
+{"id": "teste-sobrecarga-1", "esperada": "SOBRECARGA", "estilo": "padrao", "texto": "Me passaram o fechamento do estoque além do atendimento e não dá tempo de fazer os dois."}
+{"id": "teste-sobrecarga-2", "esperada": "SOBRECARGA", "estilo": "curto", "texto": "trabalho demais"}
+{"id": "teste-sobrecarga-3", "esperada": "SOBRECARGA", "estilo": "giria", "texto": "a loja ta toda desfalcada e sobra tudo pra mim, sem condição"}
+{"id": "teste-sobrecarga-4", "esperada": "SOBRECARGA", "estilo": "erro", "texto": "to fazeno dobra quase toda semana pq ninguem quer ficar"}
+{"id": "teste-sobrecarga-5", "esperada": "SOBRECARGA", "estilo": "padrao", "texto": "Nos fins de semana a fila não acaba e somos só dois no balcão."}
+{"id": "teste-sobrecarga-6", "esperada": "SOBRECARGA", "estilo": "ambiguo", "texto": "tô exausto porque fico com três funções ao mesmo tempo todo turno"}
+{"id": "teste-desmotivacao-1", "esperada": "DESMOTIVACAO", "estilo": "padrao", "texto": "Faço meu trabalho mas não sinto que faz diferença pra ninguém."}
+{"id": "teste-desmotivacao-2", "esperada": "DESMOTIVACAO", "estilo": "curto", "texto": "desanimado"}
+{"id": "teste-desmotivacao-3", "esperada": "DESMOTIVACAO", "estilo": "giria", "texto": "ta osso achar motivo pra vir, tudo muito parado"}
+{"id": "teste-desmotivacao-4", "esperada": "DESMOTIVACAO", "estilo": "erro", "texto": "nao vejo crescimento aqui, so repito as mesma tarefa"}
+{"id": "teste-desmotivacao-5", "esperada": "DESMOTIVACAO", "estilo": "padrao", "texto": "No começo eu estava animado, agora venho só pelo salário."}
+{"id": "teste-desmotivacao-6", "esperada": "DESMOTIVACAO", "estilo": "giria", "texto": "sei la, a vibe caiu, sem tesão nenhum pro trampo"}
+{"id": "teste-duvida-1", "esperada": "DUVIDA", "estilo": "padrao", "texto": "Como faço para justificar uma falta por consulta médica?"}
+{"id": "teste-duvida-2", "esperada": "DUVIDA", "estilo": "curto", "texto": "qual meu horário amanhã?"}
+{"id": "teste-duvida-3", "esperada": "DUVIDA", "estilo": "erro", "texto": "tenho direito a plano de saude ja ou so depois da experiencia"}
+{"id": "teste-duvida-4", "esperada": "DUVIDA", "estilo": "giria", "texto": "alguém sabe se rola adiantamento esse mês?"}
+{"id": "teste-duvida-5", "esperada": "DUVIDA", "estilo": "padrao", "texto": "Preciso fazer o curso de manipulação de alimentos antes de trabalhar na cozinha?"}
+{"id": "teste-duvida-6", "esperada": "DUVIDA", "estilo": "erro", "texto": "onde eu vejo meu holerite"}
+{"id": "teste-conflito_colega-1", "esperada": "CONFLITO_COLEGA", "estilo": "padrao", "texto": "Uma colega sempre sai mais cedo e deixa a limpeza do salão pra mim."}
+{"id": "teste-conflito_colega-2", "esperada": "CONFLITO_COLEGA", "estilo": "curto", "texto": "não me dou bem com meu dupla"}
+{"id": "teste-conflito_colega-3", "esperada": "CONFLITO_COLEGA", "estilo": "giria", "texto": "o mano do estoque fica de cara fechada comigo e não passa as paradas"}
+{"id": "teste-conflito_colega-4", "esperada": "CONFLITO_COLEGA", "estilo": "erro", "texto": "os colega nao me explica nada e depois fala que eu fiz errado"}
+{"id": "teste-conflito_colega-5", "esperada": "CONFLITO_COLEGA", "estilo": "padrao", "texto": "Discutimos no turno sobre a divisão das pausas e agora a gente nem se fala."}
+{"id": "teste-conflito_colega-6", "esperada": "CONFLITO_COLEGA", "estilo": "giria", "texto": "rolou um treta com a menina da chapa por causa de pedido trocado"}
+{"id": "teste-vontade_de_sair-1", "esperada": "VONTADE_DE_SAIR", "estilo": "padrao", "texto": "Acho que este trabalho não é pra mim, estou pensando em sair."}
+{"id": "teste-vontade_de_sair-2", "esperada": "VONTADE_DE_SAIR", "estilo": "curto", "texto": "quero sair daqui"}
+{"id": "teste-vontade_de_sair-3", "esperada": "VONTADE_DE_SAIR", "estilo": "giria", "texto": "já mandei currículo pra uns lugar, se chamarem eu vazo"}
+{"id": "teste-vontade_de_sair-4", "esperada": "VONTADE_DE_SAIR", "estilo": "erro", "texto": "nao sei se fico depois dos 3 mes"}
+{"id": "teste-vontade_de_sair-5", "esperada": "VONTADE_DE_SAIR", "estilo": "ambiguo", "texto": "a escala tá muito pesada e por isso tô pensando em largar"}
+{"id": "teste-vontade_de_sair-6", "esperada": "VONTADE_DE_SAIR", "estilo": "padrao", "texto": "Vou voltar a estudar e talvez precise deixar o emprego."}
+{"id": "teste-conflito_chefia-1", "esperada": "CONFLITO_CHEFIA", "estilo": "padrao", "texto": "A gerente me trata diferente dos outros e nunca aprova minhas trocas de folga."}
+{"id": "teste-conflito_chefia-2", "esperada": "CONFLITO_CHEFIA", "estilo": "curto", "texto": "problema com meu chefe"}
+{"id": "teste-conflito_chefia-3", "esperada": "CONFLITO_CHEFIA", "estilo": "giria", "texto": "o gerente tem os queridinhos dele, eu fico sempre com o pior"}
+{"id": "teste-conflito_chefia-4", "esperada": "CONFLITO_CHEFIA", "estilo": "erro", "texto": "o supervisor disse que vai me reprovar na experiencia se eu reclamar de novo"}
+{"id": "teste-conflito_chefia-5", "esperada": "CONFLITO_CHEFIA", "estilo": "ambiguo", "texto": "a líder vive me cobrando meta que ninguém mais tem, tô sobrecarregado"}
+{"id": "teste-conflito_chefia-6", "esperada": "CONFLITO_CHEFIA", "estilo": "ambiguo", "texto": "discuti com o encarregado e agora ele mal fala comigo"}
+{"id": "teste-assedio-1", "esperada": "ASSEDIO", "estilo": "padrao", "texto": "Um cliente frequente fica me esperando na saída e já pegou no meu braço."}
+{"id": "teste-assedio-2", "esperada": "ASSEDIO", "estilo": "curto", "texto": "o chefe passou a mão em mim"}
+{"id": "teste-assedio-3", "esperada": "ASSEDIO", "estilo": "giria", "texto": "o supervisor manda uns áudio estranho de madrugada perguntando se eu tô sozinha"}
+{"id": "teste-assedio-4", "esperada": "ASSEDIO", "estilo": "erro", "texto": "um colega fica falando do meu corpo toda hora e os outro ri"}
+{"id": "teste-assedio-5", "esperada": "ASSEDIO", "estilo": "ambiguo", "texto": "ele faz umas coisas que me deixam desconfortável, não sei explicar"}
+{"id": "teste-assedio-6", "esperada": "ASSEDIO", "estilo": "padrao", "texto": "Todo dia a gerente me ameaça, grita no particular e diz que ninguém vai acreditar em mim."}
+{"id": "teste-humilhacao-1", "esperada": "HUMILHACAO", "estilo": "padrao", "texto": "Fui chamada de inútil pelo supervisor na frente da equipe toda."}
+{"id": "teste-humilhacao-2", "esperada": "HUMILHACAO", "estilo": "curto", "texto": "me xingaram na frente dos clientes"}
+{"id": "teste-humilhacao-3", "esperada": "HUMILHACAO", "estilo": "giria", "texto": "a galera fica tirando onda do meu cabelo, me chamam de vassoura"}
+{"id": "teste-humilhacao-4", "esperada": "HUMILHACAO", "estilo": "erro", "texto": "o gerente debochou de mim pq eu nao sei ler direito"}
+{"id": "teste-humilhacao-5", "esperada": "HUMILHACAO", "estilo": "ambiguo", "texto": "uns colegas imitam meu jeito de falar e todo mundo ri, eles dizem que é só zoeira"}
+{"id": "teste-humilhacao-6", "esperada": "HUMILHACAO", "estilo": "padrao", "texto": "Colaram um papel com um apelido ofensivo nas minhas costas e passei o turno assim."}
+{"id": "teste-situacao_grave-1", "esperada": "SITUACAO_GRAVE", "estilo": "padrao", "texto": "Cortei a mão no fatiador, sangrou muito e me mandaram voltar pro caixa."}
+{"id": "teste-situacao_grave-2", "esperada": "SITUACAO_GRAVE", "estilo": "curto", "texto": "quero me machucar"}
+{"id": "teste-situacao_grave-3", "esperada": "SITUACAO_GRAVE", "estilo": "giria", "texto": "o extintor tá vencido e a saída de emergência vive trancada, se pegar fogo já era"}
+{"id": "teste-situacao_grave-4", "esperada": "SITUACAO_GRAVE", "estilo": "erro", "texto": "um homem armado entrou na loja e ameaçou a gente ninguem falou nada depois"}
+{"id": "teste-situacao_grave-5", "esperada": "SITUACAO_GRAVE", "estilo": "ambiguo", "texto": "não vejo mais sentido em nada, nem no trabalho nem fora dele"}
+{"id": "teste-situacao_grave-6", "esperada": "SITUACAO_GRAVE", "estilo": "padrao", "texto": "Desmaiei no estoque por causa do calor e não deixaram eu ir pra casa."}
+{"id": "teste-elogio-1", "esperada": "ELOGIO", "estilo": "padrao", "texto": "Quero agradecer a supervisora, ela me ajudou muito nos primeiros dias."}
+{"id": "teste-elogio-2", "esperada": "ELOGIO", "estilo": "curto", "texto": "amando aqui"}
+{"id": "teste-elogio-3", "esperada": "ELOGIO", "estilo": "giria", "texto": "equipe brabíssima, me sinto em casa"}
+{"id": "teste-elogio-4", "esperada": "ELOGIO", "estilo": "erro", "texto": "gostei muito do jeito que me receberao no primeiro dia"}
+{"id": "teste-elogio-5", "esperada": "ELOGIO", "estilo": "padrao", "texto": "Hoje um cliente elogiou meu atendimento e o gerente comentou com todos, fiquei orgulhosa."}
+{"id": "teste-elogio-6", "esperada": "ELOGIO", "estilo": "giria", "texto": "curti demais o treinamento, rapaziada nota 10"}
+{"id": "teste-nao_classificado-1", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "mais ou menos"}
+{"id": "teste-nao_classificado-2", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "complicado"}
+{"id": "teste-nao_classificado-3", "esperada": "NAO_CLASSIFICADO", "estilo": "curto", "texto": "ok"}
+{"id": "teste-nao_classificado-4", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "tem umas coisas que não tão legais mas deixa pra lá"}
+{"id": "teste-nao_classificado-5", "esperada": "NAO_CLASSIFICADO", "estilo": "fora_do_tema", "texto": "alguém sabe uma boa receita de bolo de cenoura?"}
+{"id": "teste-nao_classificado-6", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "normal, igual sempre"}

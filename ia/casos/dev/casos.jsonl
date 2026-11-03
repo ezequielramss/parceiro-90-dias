@@ -1,0 +1,72 @@
+{"id": "dev-cansaco-1", "esperada": "CANSACO", "estilo": "padrao", "texto": "Essa semana foi puxada, estou muito cansada e com dor nas pernas de ficar em pé."}
+{"id": "dev-cansaco-2", "esperada": "CANSACO", "estilo": "curto", "texto": "exausto"}
+{"id": "dev-cansaco-3", "esperada": "CANSACO", "estilo": "giria", "texto": "mano to só o pó hj, nem dormi direito"}
+{"id": "dev-cansaco-4", "esperada": "CANSACO", "estilo": "erro", "texto": "to muinto cansado nao consigo dormi direito por causa do horario novo"}
+{"id": "dev-cansaco-5", "esperada": "CANSACO", "estilo": "padrao", "texto": "Chego em casa sem energia pra nada, só deito e apago."}
+{"id": "dev-cansaco-6", "esperada": "CANSACO", "estilo": "giria", "texto": "bateu um cansaço sinistro essa semana, to arrastando"}
+{"id": "dev-sobrecarga-1", "esperada": "SOBRECARGA", "estilo": "padrao", "texto": "Faltaram duas pessoas e eu fiquei com o salão e o drive sozinho a tarde toda."}
+{"id": "dev-sobrecarga-2", "esperada": "SOBRECARGA", "estilo": "curto", "texto": "muita coisa pra uma pessoa só"}
+{"id": "dev-sobrecarga-3", "esperada": "SOBRECARGA", "estilo": "giria", "texto": "tão me botando pra fazer hora extra todo dia, ta osso"}
+{"id": "dev-sobrecarga-4", "esperada": "SOBRECARGA", "estilo": "erro", "texto": "nao da tempo de fazer tudo, limpeza estoque caixa tudo comigo"}
+{"id": "dev-sobrecarga-5", "esperada": "SOBRECARGA", "estilo": "padrao", "texto": "Já é a terceira semana fechando a loja e abrindo no outro dia cedo."}
+{"id": "dev-sobrecarga-6", "esperada": "SOBRECARGA", "estilo": "padrao", "texto": "A escala desse mês tá com seis dias seguidos sem folga."}
+{"id": "dev-desmotivacao-1", "esperada": "DESMOTIVACAO", "estilo": "padrao", "texto": "Não sinto mais vontade de vir trabalhar, parece que tanto faz o que eu faço."}
+{"id": "dev-desmotivacao-2", "esperada": "DESMOTIVACAO", "estilo": "curto", "texto": "sem animo"}
+{"id": "dev-desmotivacao-3", "esperada": "DESMOTIVACAO", "estilo": "giria", "texto": "ta tudo meio sem graça, vou no modo automático"}
+{"id": "dev-desmotivacao-4", "esperada": "DESMOTIVACAO", "estilo": "erro", "texto": "ninguem nem percebe quando eu faço as coisa direito, desanima"}
+{"id": "dev-desmotivacao-5", "esperada": "DESMOTIVACAO", "estilo": "padrao", "texto": "Achei que ia aprender mais, mas faço sempre a mesma coisa e não vejo futuro aqui."}
+{"id": "dev-desmotivacao-6", "esperada": "DESMOTIVACAO", "estilo": "giria", "texto": "perdi o pique, sabe? sem brilho no olho"}
+{"id": "dev-duvida-1", "esperada": "DUVIDA", "estilo": "padrao", "texto": "Queria saber quando vou receber o primeiro pagamento."}
+{"id": "dev-duvida-2", "esperada": "DUVIDA", "estilo": "curto", "texto": "posso trocar folga?"}
+{"id": "dev-duvida-3", "esperada": "DUVIDA", "estilo": "erro", "texto": "o vale refeiçao cai que dia"}
+{"id": "dev-duvida-4", "esperada": "DUVIDA", "estilo": "giria", "texto": "e ai, como faço pra pegar outro uniforme? o meu rasgou"}
+{"id": "dev-duvida-5", "esperada": "DUVIDA", "estilo": "padrao", "texto": "Não entendi como funciona o banco de horas, alguém pode me explicar?"}
+{"id": "dev-duvida-6", "esperada": "DUVIDA", "estilo": "padrao", "texto": "O treinamento online é obrigatório pra terminar a experiência?"}
+{"id": "dev-conflito_colega-1", "esperada": "CONFLITO_COLEGA", "estilo": "padrao", "texto": "Um colega do turno vive deixando a parte dele pra mim e ainda reclama quando eu cobro."}
+{"id": "dev-conflito_colega-2", "esperada": "CONFLITO_COLEGA", "estilo": "curto", "texto": "briguei com um colega hoje"}
+{"id": "dev-conflito_colega-3", "esperada": "CONFLITO_COLEGA", "estilo": "giria", "texto": "a galera da cozinha me deixa de canto, ninguém troca ideia comigo"}
+{"id": "dev-conflito_colega-4", "esperada": "CONFLITO_COLEGA", "estilo": "erro", "texto": "a menina do caixa do lado fica pegando minhas coisas e nao devolve"}
+{"id": "dev-conflito_colega-5", "esperada": "CONFLITO_COLEGA", "estilo": "padrao", "texto": "Tive uma discussão com uma colega sobre quem ia limpar o banheiro, ficou um clima ruim."}
+{"id": "dev-conflito_colega-6", "esperada": "CONFLITO_COLEGA", "estilo": "giria", "texto": "o parceiro da chapa é folgado demais, só eu ralo"}
+{"id": "dev-vontade_de_sair-1", "esperada": "VONTADE_DE_SAIR", "estilo": "padrao", "texto": "Estou pensando em pedir demissão antes de acabar a experiência."}
+{"id": "dev-vontade_de_sair-2", "esperada": "VONTADE_DE_SAIR", "estilo": "curto", "texto": "acho que vou sair"}
+{"id": "dev-vontade_de_sair-3", "esperada": "VONTADE_DE_SAIR", "estilo": "giria", "texto": "to vendo outras vagas, aqui não dá mais pra mim"}
+{"id": "dev-vontade_de_sair-4", "esperada": "VONTADE_DE_SAIR", "estilo": "erro", "texto": "se continuar assim eu vo pedir as conta"}
+{"id": "dev-vontade_de_sair-5", "esperada": "VONTADE_DE_SAIR", "estilo": "ambiguo", "texto": "To cansado demais e acho que não vou continuar depois dos 90 dias."}
+{"id": "dev-vontade_de_sair-6", "esperada": "VONTADE_DE_SAIR", "estilo": "padrao", "texto": "Recebi uma proposta de outro lugar e estou considerando aceitar."}
+{"id": "dev-conflito_chefia-1", "esperada": "CONFLITO_CHEFIA", "estilo": "padrao", "texto": "Desde que questionei a escala, o gerente só me coloca nos piores horários."}
+{"id": "dev-conflito_chefia-2", "esperada": "CONFLITO_CHEFIA", "estilo": "curto", "texto": "meu gerente me persegue"}
+{"id": "dev-conflito_chefia-3", "esperada": "CONFLITO_CHEFIA", "estilo": "giria", "texto": "a supervisora pega no meu pé o tempo todo e passa pano pros outros"}
+{"id": "dev-conflito_chefia-4", "esperada": "CONFLITO_CHEFIA", "estilo": "erro", "texto": "o gerente falou que se eu nao ficar ate mais tarde ele me manda embora"}
+{"id": "dev-conflito_chefia-5", "esperada": "CONFLITO_CHEFIA", "estilo": "ambiguo", "texto": "o encarregado cobra muito de mim e de mais ninguém, não sei se é implicância ou é só o jeito dele"}
+{"id": "dev-conflito_chefia-6", "esperada": "CONFLITO_CHEFIA", "estilo": "ambiguo", "texto": "Tô sobrecarregada porque a chefe joga tudo pra mim de propósito desde que eu discordei dela."}
+{"id": "dev-assedio-1", "esperada": "ASSEDIO", "estilo": "padrao", "texto": "Um supervisor fica comentando sobre meu corpo e mandando mensagem fora do horário."}
+{"id": "dev-assedio-2", "esperada": "ASSEDIO", "estilo": "curto", "texto": "ele tentou me agarrar no estoque"}
+{"id": "dev-assedio-3", "esperada": "ASSEDIO", "estilo": "giria", "texto": "o cara do turno da noite fica dando em cima direto, já falei que não e ele não para"}
+{"id": "dev-assedio-4", "esperada": "ASSEDIO", "estilo": "erro", "texto": "o gerente disse q se eu sair com ele eu fico efetivada"}
+{"id": "dev-assedio-5", "esperada": "ASSEDIO", "estilo": "ambiguo", "texto": "um colega faz umas brincadeiras com duplo sentido comigo que me deixam desconfortável"}
+{"id": "dev-assedio-6", "esperada": "ASSEDIO", "estilo": "padrao", "texto": "Há semanas a chefia me isola, não me passa informação e diz pros outros não falarem comigo."}
+{"id": "dev-humilhacao-1", "esperada": "HUMILHACAO", "estilo": "padrao", "texto": "O gerente gritou comigo na frente dos clientes e me chamou de incompetente."}
+{"id": "dev-humilhacao-2", "esperada": "HUMILHACAO", "estilo": "curto", "texto": "me chamaram de lerda na frente de todo mundo"}
+{"id": "dev-humilhacao-3", "esperada": "HUMILHACAO", "estilo": "giria", "texto": "os caras ficam me zoando pelo meu sotaque o dia inteiro, me botaram um apelido escroto"}
+{"id": "dev-humilhacao-4", "esperada": "HUMILHACAO", "estilo": "erro", "texto": "riram de mim no grupo da loja por causa do meu peso"}
+{"id": "dev-humilhacao-5", "esperada": "HUMILHACAO", "estilo": "ambiguo", "texto": "meu colega disse que eu sou burro na frente da equipe, mas acho que foi brincadeira"}
+{"id": "dev-humilhacao-6", "esperada": "HUMILHACAO", "estilo": "padrao", "texto": "A supervisora leu meu erro em voz alta na reunião e todo mundo riu."}
+{"id": "dev-situacao_grave-1", "esperada": "SITUACAO_GRAVE", "estilo": "padrao", "texto": "Escorreguei na câmara fria, bati a cabeça e ninguém quis me levar ao médico."}
+{"id": "dev-situacao_grave-2", "esperada": "SITUACAO_GRAVE", "estilo": "curto", "texto": "não aguento mais viver"}
+{"id": "dev-situacao_grave-3", "esperada": "SITUACAO_GRAVE", "estilo": "giria", "texto": "um cliente ameaçou me pegar lá fora quando eu sair do turno"}
+{"id": "dev-situacao_grave-4", "esperada": "SITUACAO_GRAVE", "estilo": "erro", "texto": "a fritadeira ta vazando oleo quente e mandaram eu continuar trabalhando assim mesmo"}
+{"id": "dev-situacao_grave-5", "esperada": "SITUACAO_GRAVE", "estilo": "ambiguo", "texto": "to tão cansado que às vezes penso em sumir de vez"}
+{"id": "dev-situacao_grave-6", "esperada": "SITUACAO_GRAVE", "estilo": "padrao", "texto": "Um colega me empurrou contra a parede durante uma discussão."}
+{"id": "dev-elogio-1", "esperada": "ELOGIO", "estilo": "padrao", "texto": "Minha equipe me recebeu muito bem, estou gostando muito daqui."}
+{"id": "dev-elogio-2", "esperada": "ELOGIO", "estilo": "curto", "texto": "dia top hoje"}
+{"id": "dev-elogio-3", "esperada": "ELOGIO", "estilo": "giria", "texto": "o gerente é gente boa demais, explica tudo com calma"}
+{"id": "dev-elogio-4", "esperada": "ELOGIO", "estilo": "erro", "texto": "obrigado pelo treinamento aprendi muita coisa nova"}
+{"id": "dev-elogio-5", "esperada": "ELOGIO", "estilo": "padrao", "texto": "Fiquei feliz que reconheceram meu trabalho na reunião de hoje."}
+{"id": "dev-elogio-6", "esperada": "ELOGIO", "estilo": "giria", "texto": "a galera do turno é muito parceira, sem stress"}
+{"id": "dev-nao_classificado-1", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "tá difícil"}
+{"id": "dev-nao_classificado-2", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "hoje não foi legal"}
+{"id": "dev-nao_classificado-3", "esperada": "NAO_CLASSIFICADO", "estilo": "curto", "texto": "?"}
+{"id": "dev-nao_classificado-4", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "sei lá, umas coisas aí"}
+{"id": "dev-nao_classificado-5", "esperada": "NAO_CLASSIFICADO", "estilo": "fora_do_tema", "texto": "meu time perdeu ontem, to arrasado kkk"}
+{"id": "dev-nao_classificado-6", "esperada": "NAO_CLASSIFICADO", "estilo": "vago", "texto": "poderia ser melhor"}
