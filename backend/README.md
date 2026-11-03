@@ -1,15 +1,19 @@
 # Backend — Parceiro dos 90 dias
 
 API em Java 21 + Spring Boot 3 (Maven). Recebe o webhook da WhatsApp Cloud API, valida a
-assinatura, grava as mensagens no Postgres do Supabase e conduz o aceite (H02).
+assinatura, grava as mensagens no Postgres do Supabase e conduz o fluxo da Etapa 1: aceite,
+check-in, relato, classificação, confirmação e alerta ao gerente ou ao RH com botões.
 
 O que já existe:
 
 - **Etapa 0 (H01, H38):** verificação do webhook, `WhatsAppClient` e segredos só por ambiente.
 - **Etapa 1 (H31, H02):** assinatura `X-Hub-Signature-256`, idempotência por `wamid`,
   processamento assíncrono, aceite e "parar".
+- **Etapa 1 (H18, H19, H37):** classificação pelo Gemini e regra de destino.
+- **Etapa 1 (H03, H04, H13, H16, H17, H39):** boas-vindas, check-in dos dias 1 a 10, relato com
+  confirmação, alertas com "Conversei" e "Não consegui" e auditoria.
 
-Ainda **não** existem classificação de relatos nem agendador de check-ins.
+Não há endpoint HTTP além do webhook: sem login (H32, Etapa 6) nenhum dado é exposto.
 
 ## Estrutura
 
@@ -18,10 +22,12 @@ backend/src/main/java/br/com/kallopolli/parceiro/
 ├── whatsapp/
 │   ├── WhatsAppWebhookController.java   GET (verificação) e POST (eventos) em /webhook/whatsapp
 │   ├── AssinaturaWebhook.java           HMAC-SHA256 do corpo bruto com o App Secret, tempo constante
-│   ├── ProcessadorMensagens.java        @Async: colaborador → grava (wamid único) → fluxo de aceite
-│   ├── MensagemRecebida.java            wamid, remetente, tipo e texto (toString sem número e texto)
-│   ├── MensageiroWhatsApp.java          envia texto e grava a mensagem de saída
-│   └── WhatsAppClient.java              Graph API com RestClient, timeout e erros sem token
+│   ├── ProcessadorMensagens.java        @Async: toque de alerta, colaborador, responsável ou desconhecido
+│   ├── MensagemRecebida.java            texto, toque em botão ou tipo não suportado (toString sem dados)
+│   ├── TelefoneBrasil.java              compara números com e sem o nono dígito
+│   ├── WamidsRecentes.java              idempotência das mensagens de responsáveis (em memória)
+│   ├── MensageiroWhatsApp.java          envia texto ou botões ao colaborador e grava a saída
+│   └── WhatsAppClient.java              Graph API com RestClient (texto e botões), timeout e erros sem token
 ├── consentimento/
 │   ├── FluxoConsentimento.java          "parar", "aceito" e pedido de aceite
 │   ├── EnvioAcompanhamento.java         única porta para check-ins: só envia com aceite ativo
@@ -31,6 +37,17 @@ backend/src/main/java/br/com/kallopolli/parceiro/
 │   ├── *Repository.java                 interfaces (colaboradores, consentimentos, mensagens, auditoria)
 │   ├── jdbc/JdbcRepositorios.java       implementação com JdbcClient sobre as tabelas da Etapa 1
 │   └── BancoProperties.java / BancoConfig.java   conexão lida do ambiente
+├── conversa/
+│   ├── OrquestradorConversa.java        nota, relato, confirmação, urgente, falha da IA, elogio
+│   ├── AgendadorCheckin.java            @Scheduled a cada minuto: check-in dos dias 1 a 10
+│   ├── TextosConversa.java              todos os textos (revisão em docs/textos-conversa.md)
+│   ├── *Repository.java                 estado da conversa, check-ins e relatos
+│   └── jdbc/JdbcConversaRepositorios.java
+├── alerta/
+│   ├── ServicoAlertas.java              cria o alerta e envia aos destinatários com botões
+│   ├── RespostaAlerta.java              toques "Conversei" e "Não consegui"
+│   ├── *Repository.java                 responsáveis, alertas e entregas
+│   └── jdbc/JdbcAlertaRepositorios.java
 └── classificacao/
     ├── ClassificadorRelato.java         interface: classificar(texto) nunca lança exceção
     ├── ClassificadorGemini.java         generateContent com RestClient, novas tentativas e validação
@@ -59,7 +76,8 @@ pasta `ia/`.
   o resto pede confirmação do colaborador. A confiança não muda o destino, e categoria restrita
   nunca vai ao gerente, mesmo com a tabela errada.
 
-As tabelas vêm de `supabase/migrations/20261102200100_jornada_colaboradores.sql`.
+As tabelas vêm de `supabase/migrations/20261102200100_jornada_colaboradores.sql` e
+`20261103120000_fluxo_etapa1.sql`.
 
 ## Como uma mensagem é tratada
 
@@ -68,22 +86,83 @@ As tabelas vêm de `supabase/migrations/20261102200100_jornada_colaboradores.sql
    não processa nada.
 2. Com a assinatura válida, responde **200 na hora** e entrega cada mensagem ao
    `ProcessadorMensagens`, que roda em outra thread.
-3. O processador busca o colaborador ativo pelo telefone (`+` + número da Meta). Se o número
-   não estiver cadastrado pelo RH, a mensagem é ignorada: não é gravada nem respondida.
-4. Grava a mensagem com `on conflict (wamid) do nothing`. Se o `wamid` já existia, a
-   mensagem é ignorada: nada novo é gravado e nenhuma resposta é enviada.
-5. Aplica o fluxo de aceite:
-   - **"parar"**: aceita qualquer caixa, com ou sem acento ou pontuação. Registra a retirada,
-     grava na auditoria e confirma por texto.
-   - **Sem aceite ativo e "aceito"**: registra o aceite com o texto do termo v1, grava na
-     auditoria e confirma.
-   - **Sem aceite ativo e qualquer outra mensagem**: envia o pedido de aceite com o termo.
-   - **Com aceite ativo**: a mensagem fica gravada para a classificação, que é a próxima história.
-6. Toda mensagem processada gera o log `mensagem processada`, com `wamid` e `resultado`. Uma
+3. O processador decide quem escreveu:
+   - toque em botão com id `alerta:...` é sempre resposta de responsável (seção "Alertas");
+   - número de colaborador ativo segue o fluxo abaixo. A Meta pode entregar celulares
+     brasileiros sem o nono dígito: o número é comparado com e sem o 9 depois do DDD, e as
+     respostas saem sempre para o E.164 cadastrado;
+   - número que só é responsável recebe o texto curto de responsável (isso abre a janela de
+     24 horas dele para os próximos alertas);
+   - número desconhecido é ignorado: nada é gravado nem respondido.
+4. A mensagem do colaborador é gravada com `on conflict (wamid) do nothing`. Se o `wamid` já
+   existia, nada novo é gravado e nenhuma resposta é enviada.
+5. Aceite (H02), com **"parar" acima de tudo**:
+   - "parar" (qualquer caixa, com ou sem acento ou pontuação) retira o aceite, volta a conversa
+     para `LIVRE`, marca como `DESCARTADO` o relato que aguardava confirmação e confirma;
+   - sem aceite ativo, "aceito" registra o aceite com o termo v1 e envia as boas-vindas (H03);
+     qualquer outra mensagem recebe o pedido de aceite.
+6. Com aceite ativo, a conversa segue no `OrquestradorConversa`, pelo estado em
+   `conversa_estado`:
+   - **AGUARDANDO_HUMOR** (depois do check-in): "2" ou "nota 2" grava o humor, responde e volta
+     a `LIVRE`. Outro texto vira relato (a pessoa escolheu falar).
+   - **LIVRE**: texto novo é um relato (H13). Texto vazio ou só com espaços não é gravado: o
+     assistente convida a escrever. O relato é gravado com `confirmacao = AGUARDANDO`,
+     classificado e roteado pelo `RoteadorRelato`:
+     - elogio: agradece e pronto, sem alerta;
+     - urgente (inclui `sinais_graves`): `CONFIRMADO` na hora, alerta ao RH e aviso de relato
+       urgente ao colaborador, sem esperar confirmação;
+     - falha da IA: `CONFIRMADO`, alerta ao RH sem classificação e aviso ao colaborador (H37);
+     - demais: mostra o resumo e pergunta se pode encaminhar, com os botões
+       `conf:<relatoId>:sim` e `conf:<relatoId>:nao`. Nada sai antes do "sim".
+   - **AGUARDANDO_CONFIRMACAO_RELATO** (H16): "sim" (botão ou texto) cria e envia o alerta;
+     "não" marca `DESCARTADO` e confirma que nada foi enviado; qualquer outro texto substitui
+     o relato, reclassifica e pede nova confirmação.
+   - Áudio, imagem, vídeo ou figurinha recebem "por enquanto só leio texto", sem mudar o estado.
+7. Toda mensagem processada gera o log `mensagem processada`, com `wamid` e `resultado`. Uma
    falha gera `falha ao processar mensagem`, só com `wamid` e o nome da exceção.
 
-Mensagens de acompanhamento só saem por `EnvioAcompanhamento.enviar(...)`, que recusa quem
-não tem aceite ativo. O agendador da próxima etapa deve usar essa classe.
+### Check-in (H04)
+
+Não há horário (decisão do PO). O `AgendadorCheckin` roda a cada minuto, no fuso
+America/Sao_Paulo (`Clock` injetado), e envia o check-in do dia a quem está ativo, tem aceite
+ativo e ainda não recebeu o do dia: `dia_jornada = (hoje - data_inicio) + 1`, só dias 1 a 10.
+A linha em `checkins` é inserida antes do envio (unicidade colaborador + dia), então o mesmo
+dia nunca sai duas vezes. Dia perdido não é recuperado. Quem está confirmando um relato recebe
+o check-in depois, no mesmo dia. Sem resposta, não há cobrança. Liga e desliga com
+`parceiro.checkin.ativo` (padrão `true`; os testes usam `false`).
+
+### Alertas (H17, H19, H39)
+
+- Destinatários: `GERENTE` = gerentes ativos da loja do colaborador (comparação sem caixa e
+  espaços, `normalizar_loja`); `RH` = todos os RH ativos; `GERENTE_E_RH` = os dois. Loja sem
+  gerente ativo: vai ao RH e fica na auditoria.
+- Uma linha em `alerta_entregas` por destinatário, com os botões "Conversei"
+  (`alerta:<entregaId>:ok`) e "Não consegui" (`alerta:<entregaId>:nao`). O gerente nunca
+  recebe nome, motivo nem texto do relato; o RH recebe o motivo, nunca o nome nem o texto.
+- Toque: só vale do número dono da entrega. "Conversei" grava `CONVERSEI` e põe o alerta em
+  `ATENDIDO` (contato realizado, **não** resolvido); "Não consegui" grava `NAO_CONSEGUI` e o
+  alerta continua `ABERTO`. "Conversei" vale depois de "Não consegui"; o contrário e os toques
+  repetidos são ignorados.
+- Criação, envio, falha de envio e toque vão para `auditoria` (quem, o quê, quando), sem texto
+  de relato.
+
+Mensagens de acompanhamento (check-in) só saem por `EnvioAcompanhamento.enviar(...)`, que
+recusa quem não tem aceite ativo.
+
+### Limitações desta etapa
+
+- **Janela de 24 horas.** Sem modelo de mensagem aprovado na Meta, o WhatsApp só entrega texto
+  livre a quem escreveu ao assistente nas últimas 24 horas. Por isso o **check-in só chega a
+  quem conversou com o assistente nas últimas 24 horas**, e o **responsável precisa ter escrito
+  ao assistente nas últimas 24 horas** para receber o alerta. Envio que falha é marcado
+  (`CHECKIN_FALHA_ENVIO`, `falha_envio` na entrega) e não é repetido; lembrete e escalonamento
+  ficam para a Etapa 3.
+- **Idempotência de responsáveis.** As mensagens de gerente e RH não vão para `mensagens`
+  (a tabela exige colaborador); os wamids recentes ficam em memória (`WamidsRecentes`). O toque
+  em botão é idempotente pela própria regra.
+- Fora desta etapa: áudio, lembrete de 24 horas e subida ao RH, retorno ao colaborador após o
+  atendimento, check-ins depois do dia 10, regra do gerente citado no relato, purga dos 90
+  dias e painel com login.
 
 ## Segredos
 
