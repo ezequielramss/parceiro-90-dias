@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "properties": {
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "CANSACO",
+        "SOBRECARGA",
+        "DESMOTIVACAO",
+        "DUVIDA",
+        "CONFLITO_COLEGA",
+        "VONTADE_DE_SAIR",
+        "CONFLITO_CHEFIA",
+        "ASSEDIO",
+        "HUMILHACAO",
+        "SITUACAO_GRAVE",
+        "ELOGIO",
+        "NAO_CLASSIFICADO"
+      ]
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Uma frase curta e neutra explicando o que no relato levou à categoria."
+    },
+    "acao_sugerida": {
+      "type": "string",
+      "description": "Uma frase com uma ação para o gerente ou o RH, conforme o destino da categoria."
+    },
+    "confianca": {
+      "type": "string",
+      "enum": ["baixa", "media", "alta"]
+    },
+    "sinais_graves": {
+      "type": "boolean",
+      "description": "Indício de risco à integridade, violência, ameaça, assédio sexual, crime ou menção a se machucar."
+    }
+  },
+  "required": ["categoria", "motivo", "acao_sugerida", "confianca", "sinais_graves"],
+  "additionalProperties": false
+}
