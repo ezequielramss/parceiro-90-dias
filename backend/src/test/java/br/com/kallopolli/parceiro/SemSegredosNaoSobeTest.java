@@ -1,41 +1,84 @@
 package br.com.kallopolli.parceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.junit.jupiter.api.io.TempDir;
 
+/**
+ * A aplicação não sobe sem as variáveis de ambiente dos segredos (H38).
+ *
+ * <p>Sobe a aplicação num processo Java separado, numa pasta temporária vazia e com as variáveis
+ * de segredo removidas do ambiente. O application.yml importa "optional:file:.env" relativo à
+ * pasta do processo; assim nenhum backend/.env local entra no teste, exista ele ou não, e
+ * variáveis reais definidas na máquina também não.
+ */
 class SemSegredosNaoSobeTest {
 
-    // Ignora um .env local para simular um ambiente sem segredos.
-    private static final String SEM_ENV = "--spring.config.import=optional:file:nao-existe.properties";
+    private static final List<String> SEGREDOS = List.of(
+            "WHATSAPP_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_VERIFY_TOKEN", "WHATSAPP_APP_SECRET",
+            "WHATSAPP_GRAPH_VERSION", "DATABASE_URL", "DATABASE_USER", "DATABASE_PASSWORD");
 
-    @BeforeEach
-    void exigeAmbienteLimpo() {
-        assumeTrue(System.getenv("WHATSAPP_TOKEN") == null && System.getenv("DATABASE_URL") == null,
-                "variáveis reais definidas nesta máquina");
+    @TempDir
+    Path pastaSemEnv;
+
+    record Resultado(boolean terminou, int codigo, String saida) {}
+
+    @Test
+    void aplicacaoNaoSobeSemNenhumaVariavel() throws Exception {
+        Resultado r = subir(Map.of());
+
+        assertThat(r.terminou()).as("a aplicação deveria ter parado sozinha").isTrue();
+        assertThat(r.codigo()).isNotZero();
+        assertThat(r.saida())
+                .contains("APPLICATION FAILED TO START")
+                .containsAnyOf("whatsapp.", "parceiro.banco.")
+                .doesNotContain("Started ParceiroApplication");
     }
 
     @Test
-    void aplicacaoNaoSobeSemNenhumaVariavel() {
-        Throwable erro = catchThrowable(() -> new SpringApplicationBuilder(ParceiroApplication.class)
-                .run("--server.port=0", SEM_ENV));
+    void aplicacaoNaoSobeSemAsVariaveisDoBanco() throws Exception {
+        Resultado r = subir(Map.of(
+                "WHATSAPP_TOKEN", "token-falso", "WHATSAPP_PHONE_NUMBER_ID", "1",
+                "WHATSAPP_VERIFY_TOKEN", "verify-falso", "WHATSAPP_APP_SECRET", "segredo-falso",
+                "WHATSAPP_GRAPH_VERSION", "v99.0"));
 
-        assertThat(erro).isNotNull();
-        assertThat(erro).rootCause().message().containsAnyOf("whatsapp", "parceiro.banco");
+        assertThat(r.terminou()).as("a aplicação deveria ter parado sozinha").isTrue();
+        assertThat(r.codigo()).isNotZero();
+        assertThat(r.saida())
+                .contains("APPLICATION FAILED TO START", "parceiro.banco.")
+                .doesNotContain("Started ParceiroApplication");
     }
 
-    @Test
-    void aplicacaoNaoSobeSemAsVariaveisDoBanco() {
-        Throwable erro = catchThrowable(() -> new SpringApplicationBuilder(ParceiroApplication.class)
-                .run("--server.port=0", SEM_ENV,
-                        "--WHATSAPP_TOKEN=x", "--WHATSAPP_PHONE_NUMBER_ID=1", "--WHATSAPP_VERIFY_TOKEN=v",
-                        "--WHATSAPP_APP_SECRET=s", "--WHATSAPP_GRAPH_VERSION=v99.0"));
+    private Resultado subir(Map<String, String> variaveis) throws IOException, InterruptedException {
+        String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        ProcessBuilder pb = new ProcessBuilder(
+                java, "-cp", System.getProperty("java.class.path"),
+                ParceiroApplication.class.getName(), "--server.port=0")
+                .directory(pastaSemEnv.toFile())
+                .redirectErrorStream(true);
+        SEGREDOS.forEach(pb.environment()::remove);
+        pb.environment().putAll(variaveis);
 
-        assertThat(erro).isNotNull();
-        assertThat(erro).rootCause().message().contains("parceiro.banco");
+        Process processo = pb.start();
+        CompletableFuture<String> saida = CompletableFuture.supplyAsync(() -> {
+            try {
+                return new String(processo.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                return "";
+            }
+        });
+        boolean terminou = processo.waitFor(90, TimeUnit.SECONDS);
+        if (!terminou) {
+            processo.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
+        }
+        return new Resultado(terminou, terminou ? processo.exitValue() : -1, saida.join());
     }
 }
