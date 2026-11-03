@@ -24,7 +24,8 @@ class SemSegredosNaoSobeTest {
 
     private static final List<String> SEGREDOS = List.of(
             "WHATSAPP_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_VERIFY_TOKEN", "WHATSAPP_APP_SECRET",
-            "WHATSAPP_GRAPH_VERSION", "DATABASE_URL", "DATABASE_USER", "DATABASE_PASSWORD");
+            "WHATSAPP_GRAPH_VERSION", "DATABASE_URL", "DATABASE_USER", "DATABASE_PASSWORD",
+            "GEMINI_API_KEY", "GEMINI_MODEL");
 
     @TempDir
     Path pastaSemEnv;
@@ -39,7 +40,7 @@ class SemSegredosNaoSobeTest {
         assertThat(r.codigo()).isNotZero();
         assertThat(r.saida())
                 .contains("APPLICATION FAILED TO START")
-                .containsAnyOf("whatsapp.", "parceiro.banco.")
+                .containsAnyOf("whatsapp.", "parceiro.banco.", "gemini.")
                 .doesNotContain("Started ParceiroApplication");
     }
 
@@ -48,13 +49,30 @@ class SemSegredosNaoSobeTest {
         Resultado r = subir(Map.of(
                 "WHATSAPP_TOKEN", "token-falso", "WHATSAPP_PHONE_NUMBER_ID", "1",
                 "WHATSAPP_VERIFY_TOKEN", "verify-falso", "WHATSAPP_APP_SECRET", "segredo-falso",
-                "WHATSAPP_GRAPH_VERSION", "v99.0"));
+                "WHATSAPP_GRAPH_VERSION", "v99.0",
+                "GEMINI_API_KEY", "chave-falsa", "GEMINI_MODEL", "modelo-falso"));
 
         assertThat(r.terminou()).as("a aplicação deveria ter parado sozinha").isTrue();
         assertThat(r.codigo()).isNotZero();
         assertThat(r.saida())
                 .contains("APPLICATION FAILED TO START", "parceiro.banco.")
                 .doesNotContain("Started ParceiroApplication");
+    }
+
+    @Test
+    void aplicacaoNaoSobeSemAsVariaveisDoGemini() throws Exception {
+        Resultado r = subir(Map.of(
+                "WHATSAPP_TOKEN", "token-falso", "WHATSAPP_PHONE_NUMBER_ID", "1",
+                "WHATSAPP_VERIFY_TOKEN", "verify-falso", "WHATSAPP_APP_SECRET", "segredo-falso",
+                "WHATSAPP_GRAPH_VERSION", "v99.0",
+                "DATABASE_URL", "jdbc:postgresql://127.0.0.1:1/nao-usado", "DATABASE_USER", "usuario-falso",
+                "DATABASE_PASSWORD", "senha-falsa"));
+
+        assertThat(r.terminou()).as("a aplicação deveria ter parado sozinha").isTrue();
+        assertThat(r.codigo()).isNotZero();
+        assertThat(r.saida())
+                .contains("APPLICATION FAILED TO START", "gemini.")
+                .doesNotContain("Started ParceiroApplication", "chave-falsa");
     }
 
     private Resultado subir(Map<String, String> variaveis) throws IOException, InterruptedException {

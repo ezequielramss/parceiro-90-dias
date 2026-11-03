@@ -5,8 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.kallopolli.parceiro.classificacao.ClassificadorGemini;
+import br.com.kallopolli.parceiro.classificacao.GeminiFalso;
+import br.com.kallopolli.parceiro.classificacao.GeminiProperties;
+import br.com.kallopolli.parceiro.classificacao.PromptClassificacao;
 import br.com.kallopolli.parceiro.jornada.BancoProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import org.springframework.web.client.RestClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,9 +93,40 @@ class LogsSemSegredosTest extends WebhookTestBase {
     }
 
     @Test
-    void propriedadesNaoImprimemSegredos(@Autowired WhatsAppProperties whatsapp, @Autowired BancoProperties banco) {
+    void propriedadesNaoImprimemSegredos(@Autowired WhatsAppProperties whatsapp, @Autowired BancoProperties banco,
+                                         @Autowired GeminiProperties gemini) {
         assertThat(whatsapp.toString()).doesNotContain(TOKEN_FALSO, VERIFY_TOKEN_FALSO, APP_SECRET_FALSO);
         assertThat(banco.toString()).doesNotContain(SENHA_BANCO_FALSA);
+        assertThat(gemini.toString()).doesNotContain(CHAVE_GEMINI_FALSA);
+    }
+
+    @Test
+    void classificadorNaoLogaRelatoRespostaNemChave(CapturedOutput saida, @Autowired ObjectMapper objectMapper,
+                                                    @Autowired PromptClassificacao prompt) throws Exception {
+        String motivo = "MOTIVO-FICTICIO-DA-RESPOSTA";
+        try (GeminiFalso gemini = new GeminiFalso()) {
+            var props = new GeminiProperties(CHAVE_GEMINI_FALSA, "modelo-falso", gemini.url(),
+                    Duration.ofSeconds(2), Duration.ofMillis(300), 2000, 2, Duration.ofMillis(5), Duration.ofMillis(20));
+            var classificador = new ClassificadorGemini(RestClient.builder(), props, objectMapper, prompt);
+
+            // Pior caso: o erro repete a chave e o relato; depois vem uma resposta inválida e uma válida.
+            var erroComEco = new GeminiFalso.Resposta(429, """
+                    {"error":{"code":429,"message":"chave %s relato %s"}}""".formatted(CHAVE_GEMINI_FALSA, TEXTO), 0);
+            gemini.responder(erroComEco, GeminiFalso.classificacao("INVENTADA"));
+            assertThat(classificador.classificar(TEXTO).falhaIa()).isTrue();
+
+            gemini.responder(new GeminiFalso.Resposta(500, "{\"erro\":\"" + TEXTO + "\"}", 0));
+            assertThat(classificador.classificar(TEXTO).falhaIa()).isTrue();
+
+            gemini.responder(GeminiFalso.sucesso("""
+                    {"categoria":"CANSACO","motivo":"%s","acao_sugerida":"ACAO-FICTICIA",\
+                    "confianca":"alta","sinais_graves":false}""".formatted(motivo)));
+            assertThat(classificador.classificar(TEXTO + " " + NUMERO).motivo()).isEqualTo(motivo);
+        }
+
+        assertThat(saida.getAll()).contains("falha ao classificar relato", "\"status_http\":429", "RespostaInvalida");
+        assertThat(saida.getAll()).doesNotContain(CHAVE_GEMINI_FALSA, motivo, "ACAO-FICTICIA");
+        semSegredos(saida);
     }
 
     private static void semSegredos(CapturedOutput saida) throws RuntimeException {

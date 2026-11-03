@@ -27,11 +27,37 @@ backend/src/main/java/br/com/kallopolli/parceiro/
 │   ├── EnvioAcompanhamento.java         única porta para check-ins: só envia com aceite ativo
 │   ├── Textos.java                      termo v1 e mensagens do fluxo
 │   └── TextoNormalizado.java            sem acento, minúsculas, sem pontuação
-└── jornada/
-    ├── *Repository.java                 interfaces (colaboradores, consentimentos, mensagens, auditoria)
-    ├── jdbc/JdbcRepositorios.java       implementação com JdbcClient sobre as tabelas da Etapa 1
-    └── BancoProperties.java / BancoConfig.java   conexão lida do ambiente
+├── jornada/
+│   ├── *Repository.java                 interfaces (colaboradores, consentimentos, mensagens, auditoria)
+│   ├── jdbc/JdbcRepositorios.java       implementação com JdbcClient sobre as tabelas da Etapa 1
+│   └── BancoProperties.java / BancoConfig.java   conexão lida do ambiente
+└── classificacao/
+    ├── ClassificadorRelato.java         interface: classificar(texto) nunca lança exceção
+    ├── ClassificadorGemini.java         generateContent com RestClient, novas tentativas e validação
+    ├── PromptClassificacao.java         prompt e esquema lidos do classpath (fonte: ia/classificacao)
+    ├── RoteadorRelato.java              regra pura de destino, urgência e confirmação (H19)
+    ├── CategoriaRepository.java         tabela categorias (jdbc/JdbcCategoriaRepository.java)
+    └── GeminiProperties.java            configuração do Gemini lida do ambiente
 ```
+
+O prompt e o esquema da classificação não são copiados para o Java: o Maven leva
+`ia/classificacao/prompt.md` e `ia/classificacao/saida.schema.json` para o classpath em
+`classificacao/` no build. Um teste falha se algum deles faltar, estiver vazio ou divergir da
+pasta `ia/`.
+
+### Classificação e roteamento
+
+- `ClassificadorGemini` chama `POST /v1beta/models/{GEMINI_MODEL}:generateContent` com o prompt
+  em `systemInstruction`, o relato entre `<relato>` e `</relato>` (tags removidas do texto e
+  tamanho limitado a 2000 caracteres), temperatura 0 e resposta JSON no esquema
+  (`responseJsonSchema`). Resposta inválida, categoria fora da lista ou campo faltando viram
+  `Classificacao.falha()` (`NAO_CLASSIFICADO`, `falhaIa`).
+- Em 429, 5xx, timeout ou erro de rede, tenta de novo até 2 vezes, respeitando o `retryDelay` da
+  API com teto de 5 s. No nível gratuito o 429 é esperado: o relato vai ao RH sem classificação.
+- `RoteadorRelato.decidir` usa a tabela `categorias`: falha da IA vai ao RH sem confirmação;
+  categoria urgente ou `sinais_graves` vai ao RH na hora; elogio (`AGREGADO`) não gera alerta;
+  o resto pede confirmação do colaborador. A confiança não muda o destino, e categoria restrita
+  nunca vai ao gerente, mesmo com a tabela errada.
 
 As tabelas vêm de `supabase/migrations/20261102200100_jornada_colaboradores.sql`.
 
@@ -74,6 +100,8 @@ aplicação não sobe e diz qual falta.
 | `DATABASE_URL` | `jdbc:postgresql://host:porta/postgres` do Supabase |
 | `DATABASE_USER` | usuário do banco (conexão de servidor; anon e authenticated não têm acesso) |
 | `DATABASE_PASSWORD` | senha do banco |
+| `GEMINI_API_KEY` | chave do Google AI Studio para classificar relatos; vai só no cabeçalho `x-goog-api-key` |
+| `GEMINI_MODEL` | modelo do Gemini, por exemplo `gemini-3.1-flash-lite` (ver `ia/README.md`) |
 
 Para desenvolvimento, copie `.env.example` para `.env` **dentro de `backend/`** e preencha.
 O `.env` está no `.gitignore` e é lido automaticamente. Use `CHAVE=valor`, sem aspas.

@@ -53,6 +53,20 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Fonte única do prompt da classificação (H18): ia/classificacao, nunca copiado para o Java. -->
+            <resource>
+                <directory>${project.basedir}/../ia/classificacao</directory>
+                <targetPath>classificacao</targetPath>
+                <includes>
+                    <include>prompt.md</include>
+                    <include>saida.schema.json</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
