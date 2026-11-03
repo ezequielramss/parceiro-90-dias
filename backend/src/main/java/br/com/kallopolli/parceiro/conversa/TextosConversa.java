@@ -9,8 +9,9 @@ import java.util.Map;
  * <p>Os mesmos textos estão em docs/textos-conversa.md para revisão do PO, do RH e do jurídico.
  * O termo de aceite v1 continua em consentimento/Textos.java.
  *
- * <p>Regras de tom: português do Brasil, "você", curto, no máximo um emoji e nenhum nas mensagens
- * graves; nada de diagnóstico, pontuação ou vigilância; o canal é "confidencial, não anônimo".
+ * <p>Regras de tom: português do Brasil, "você", curto, linguagem neutra ("Agradeço", nunca
+ * "Obrigado"), no máximo um emoji e nenhum nas mensagens graves; nada de diagnóstico, pontuação ou
+ * vigilância; o canal é "confidencial, não anônimo".
  * Os alertas nunca recebem o nome do colaborador nem o texto do relato; o do gerente também não
  * recebe o motivo.
  */
@@ -84,11 +85,11 @@ public final class TextosConversa {
 
     public static String respostaNota(int nota) {
         return switch (nota) {
-            case 1, 2 -> "Obrigado por contar. Sinto muito que hoje não esteja sendo um bom dia. "
+            case 1, 2 -> "Agradeço por você contar. Sinto muito que hoje não esteja sendo um bom dia. "
                     + "Se quiser, me conte com suas palavras o que está acontecendo. "
                     + "Se preferir não falar agora, tudo bem.";
-            case 3 -> "Obrigado por responder. Se quiser contar algo sobre o seu dia, é só escrever.";
-            case 4, 5 -> "Que bom saber disso! 🙂 Obrigado por responder.";
+            case 3 -> "Agradeço a sua resposta. Se quiser contar algo sobre o seu dia, é só escrever.";
+            case 4, 5 -> "Que bom saber disso! 🙂 Agradeço a sua resposta.";
             default -> throw new IllegalArgumentException("a nota vai de 1 a 5");
         };
     }
@@ -109,7 +110,7 @@ public final class TextosConversa {
     // 5. Encaminhado e nada enviado
 
     public static String relatoEncaminhado() {
-        return "Pronto, encaminhei. Obrigado por confiar e contar. Se quiser acrescentar algo, é só escrever.";
+        return "Pronto, encaminhei. Agradeço a confiança. Se quiser acrescentar algo, é só escrever.";
     }
 
     public static String nadaEnviado() {
@@ -119,7 +120,7 @@ public final class TextosConversa {
     // 6. Relato urgente: vai direto ao RH, sem confirmação. Sem emoji.
 
     public static String relatoUrgente() {
-        return "Obrigado por contar. O que você relatou é sério, e por isso o RH já foi avisado. "
+        return "Agradeço por você contar. O que você relatou é sério, e por isso o RH já foi avisado. "
                 + "Uma pessoa do RH vai procurar você para conversar. "
                 + "Você não precisa fazer mais nada agora.";
     }
@@ -127,14 +128,14 @@ public final class TextosConversa {
     // 7. IA indisponível (H37)
 
     public static String iaIndisponivel() {
-        return "Recebi seu relato, obrigado por contar. Não consegui analisar a mensagem agora, "
+        return "Recebi seu relato, agradeço por você contar. Não consegui analisar a mensagem agora, "
                 + "então uma pessoa do RH vai olhar com atenção.";
     }
 
     // 8. Elogio
 
     public static String elogioRecebido() {
-        return "Que bom ler isso! 😊 Obrigado por compartilhar.";
+        return "Que bom ler isso! 😊 Agradeço por compartilhar.";
     }
 
     // 9. Tipos não suportados (áudio, imagem, vídeo, figurinha)

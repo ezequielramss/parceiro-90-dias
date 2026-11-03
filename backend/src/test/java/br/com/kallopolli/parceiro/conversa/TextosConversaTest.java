@@ -104,6 +104,31 @@ class TextosConversaTest {
         assertThat(PROIBIDOS).noneMatch(minusculo::contains);
     }
 
+    /** Palavras flexionadas no masculino ou no feminino quando dirigidas ao colaborador. */
+    private static final Pattern GENERO = Pattern.compile(
+            "\\b(obrigad[oa]s?|bem-vind[oa]s?|tranquil[oa]s?|sozinh[oa]s?|cansad[oa]s?|preocupad[oa]s?"
+                    + "|animad[oa]s?|acolhid[oa]s?|seguro|segura|sozinh[oa])\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    @ParameterizedTest
+    @MethodSource("todosOsTextos")
+    void linguagemNeutra(String texto) {
+        assertThat(GENERO.matcher(texto).find()).as("palavra com gênero em: %s", texto).isFalse();
+    }
+
+    @Test
+    void documentoDeRevisaoTambemUsaLinguagemNeutra() throws IOException {
+        String doc = Files.readString(Path.of("..", "docs", "textos-conversa.md"), StandardCharsets.UTF_8);
+        // A seção de regras cita os exemplos proibidos entre aspas; os textos ficam nos blocos ```text.
+        Matcher blocos = Pattern.compile("```text\\n(.*?)```", Pattern.DOTALL).matcher(doc.replace("\r\n", "\n"));
+        int encontrados = 0;
+        while (blocos.find()) {
+            encontrados++;
+            assertThat(GENERO.matcher(blocos.group(1)).find()).as("bloco: %s", blocos.group(1)).isFalse();
+        }
+        assertThat(encontrados).isGreaterThan(10);
+    }
+
     @ParameterizedTest
     @MethodSource("todosOsTextos")
     void anonimoSoAparecePrecedidoDeNao(String texto) {

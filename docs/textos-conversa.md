@@ -10,6 +10,8 @@ O termo de aceite v1 não está aqui: ele continua em `consentimento/Textos.java
 
 **Regras de tom:**
 - português do Brasil, "você", frases curtas, sem gíria;
+- linguagem neutra ao falar com o colaborador: "Agradeço", "Boas-vindas", "Fico à disposição",
+  nunca "Obrigado", "bem-vindo", "tranquilo" e semelhantes;
 - no máximo um emoji por mensagem e nenhum nas mensagens graves;
 - nada de diagnóstico, termos clínicos, pontuação ou linguagem de vigilância;
 - sobre privacidade, sempre "confidencial, não anônimo"; nunca "100%".
@@ -57,19 +59,19 @@ Responda com uma nota de 1 a 5 (1 = muito mal, 2 = mal, 3 = mais ou menos, 4 = b
 Notas 1 e 2 (convida a contar, sem insistir e sem prometer que alguém será avisado):
 
 ```text
-Obrigado por contar. Sinto muito que hoje não esteja sendo um bom dia. Se quiser, me conte com suas palavras o que está acontecendo. Se preferir não falar agora, tudo bem.
+Agradeço por você contar. Sinto muito que hoje não esteja sendo um bom dia. Se quiser, me conte com suas palavras o que está acontecendo. Se preferir não falar agora, tudo bem.
 ```
 
 Nota 3:
 
 ```text
-Obrigado por responder. Se quiser contar algo sobre o seu dia, é só escrever.
+Agradeço a sua resposta. Se quiser contar algo sobre o seu dia, é só escrever.
 ```
 
 Notas 4 e 5:
 
 ```text
-Que bom saber disso! 🙂 Obrigado por responder.
+Que bom saber disso! 🙂 Agradeço a sua resposta.
 ```
 
 ## 4. Confirmação do relato (H16)
@@ -92,7 +94,7 @@ Botões: **Sim, pode enviar** e **Não enviar**.
 Encaminhado:
 
 ```text
-Pronto, encaminhei. Obrigado por confiar e contar. Se quiser acrescentar algo, é só escrever.
+Pronto, encaminhei. Agradeço a confiança. Se quiser acrescentar algo, é só escrever.
 ```
 
 Nada foi enviado:
@@ -107,19 +109,19 @@ Assunto grave, que vai direto ao RH sem esperar confirmação. Sem emoji, sem or
 emergência e sem números de telefone.
 
 ```text
-Obrigado por contar. O que você relatou é sério, e por isso o RH já foi avisado. Uma pessoa do RH vai procurar você para conversar. Você não precisa fazer mais nada agora.
+Agradeço por você contar. O que você relatou é sério, e por isso o RH já foi avisado. Uma pessoa do RH vai procurar você para conversar. Você não precisa fazer mais nada agora.
 ```
 
 ## 7. IA indisponível (H37)
 
 ```text
-Recebi seu relato, obrigado por contar. Não consegui analisar a mensagem agora, então uma pessoa do RH vai olhar com atenção.
+Recebi seu relato, agradeço por você contar. Não consegui analisar a mensagem agora, então uma pessoa do RH vai olhar com atenção.
 ```
 
 ## 8. Elogio recebido
 
 ```text
-Que bom ler isso! 😊 Obrigado por compartilhar.
+Que bom ler isso! 😊 Agradeço por compartilhar.
 ```
 
 ## 9. Áudio, imagem, vídeo ou figurinha
