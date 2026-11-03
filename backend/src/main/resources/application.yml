@@ -18,6 +18,20 @@ parceiro:
   # Check-in dos dias 1 a 10, a cada minuto (H04). Desligue com false (ex.: em testes).
   checkin:
     ativo: true
+  # Retenção (termo de participação): todo dia apaga texto e motivo dos relatos com mais de 90 dias.
+  retencao:
+    ativo: true
+  # Dashboard (login pelo Supabase Auth). Opcional: sem URL ou chave, o painel responde 503 e o
+  # WhatsApp continua funcionando. A chave nunca vai para o navegador.
+  dashboard:
+    supabase-url: ${SUPABASE_URL:}
+    supabase-publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
+    # Cookie só por HTTPS. Desligado apenas no perfil local (fim deste arquivo).
+    cookie-seguro: true
+    connect-timeout: 3s
+    read-timeout: 10s
+    # O Supabase guarda o JWKS por até 10 minutos; aqui, no máximo mais 10.
+    jwks-cache: 10m
 
 whatsapp:
   token: ${WHATSAPP_TOKEN}
@@ -54,3 +68,13 @@ logging:
   structured:
     format:
       console: ecs
+
+---
+# Perfil local (SPRING_PROFILES_ACTIVE=local): dashboard em http://localhost, sem HTTPS.
+spring:
+  config:
+    activate:
+      on-profile: local
+parceiro:
+  dashboard:
+    cookie-seguro: false
