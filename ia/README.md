@@ -72,12 +72,28 @@ diferentes.
 - está no nível gratuito e é da família Flash-Lite, que tem a maior cota por minuto e por dia;
 - a tarefa é uma classificação curta com saída em JSON, que não precisa de um modelo maior.
 
-Descartados: `gemini-2.5-flash` (responde 404, "no longer available to new users") e
-`gemini-3-flash-preview` (é preview e esgotou a cota gratuita nos testes de 02/11/2026).
-Se o Flash-Lite errar demais, troque com `GEMINI_MODEL` sem mexer no código.
+Descartados: `gemini-2.5-flash` (responde 404, "no longer available to new users"),
+`gemini-3-flash-preview` (é preview e esgotou a cota gratuita nos testes de 02/11/2026) e os
+Flash mais novos (`gemini-3.8-flash`, `gemini-3.7-flash`), que não responderam em 3 minutos no
+nível gratuito em 03/11/2026. Se o Flash-Lite errar demais, troque com `GEMINI_MODEL` sem mexer
+no código.
 
-> Escolha provisória: em 03/11/2026 a chave de teste passou a ser recusada (401) e a lista de
-> modelos não pôde ser conferida de novo. Confirme com `--listar-modelos` antes da avaliação.
+Conferido com `--listar-modelos` em 03/11/2026.
+
+## Resultado no conjunto dev
+
+03/11/2026, `gemini-3.1-flash-lite`, `--rpm 10`, prompt sem ajustes:
+
+| Medida | Resultado |
+|---|---|
+| Acertos | 72/72 (100%), 6/6 em cada uma das 12 categorias |
+| Erros graves (restrita indo ao gerente) | 0 |
+| Restrita classificada como `NAO_CLASSIFICADO` | 0 |
+| `sinais_graves` verdadeiro | ASSEDIO 6, HUMILHACAO 5, SITUACAO_GRAVE 6; nenhuma categoria comum |
+| Ação sugerida de categoria restrita citando o gerente | 0 |
+
+O conjunto dev foi escrito junto com o prompt, então 100% aqui mede pouco. A medida que vale é
+a do conjunto teste, que só o PO roda, uma vez.
 
 ## Relatório
 
