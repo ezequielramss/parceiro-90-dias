@@ -30,7 +30,16 @@ Retorna uma lista com `id`, `nome`, `iniciais`, `funcao`, `loja`, `diaJornada`, 
 [{"id":"a01","colaboradorId":null,"protocolo":"PD90-2026-0140","categoria":"CONFLITO_CHEFIA","severidade":"ALTA","destino":"RH","destinatarioNome":"Equipe de RH","criadoEm":"2026-10-26T08:10:00-03:00","status":"SEM_RETORNO_24H","retorno":null,"respondidoEm":null,"lembreteEnviadoEm":"2026-10-27T08:10:00-03:00","sugestao":"Vale uma conversa ainda hoje","colaboradorAvisado":true}]
 ```
 
-Categorias: `CANSACO`, `SOBRECARGA`, `DESMOTIVACAO`, `VONTADE_DE_SAIR`, `DUVIDA`, `CONFLITO_COLEGA`, `CONFLITO_CHEFIA`, `ASSEDIO`, `SITUACAO_GRAVE`. Destinos de `CONFLITO_CHEFIA` e `ASSEDIO` são RH; `SITUACAO_GRAVE` também vai a RH. As demais categorias são encaminhadas ao gerente.
+Categorias (tabela `categorias`, 12 códigos):
+
+| Destino | Categorias |
+|---|---|
+| Gerente da loja | `CANSACO`, `SOBRECARGA`, `DESMOTIVACAO`, `DUVIDA`, `CONFLITO_COLEGA` |
+| Gerente e RH | `VONTADE_DE_SAIR` |
+| Só RH | `CONFLITO_CHEFIA`, `NAO_CLASSIFICADO`; urgentes: `ASSEDIO`, `HUMILHACAO`, `SITUACAO_GRAVE` |
+| Sem alerta (só indicadores agregados) | `ELOGIO` |
+
+Sinais graves em qualquer categoria levam o relato ao RH como urgente. Categorias só do RH nunca aparecem para o gerente.
 
 ## `GET /api/perfil`
 
