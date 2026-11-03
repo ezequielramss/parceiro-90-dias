@@ -1,13 +1,13 @@
-import { h, icon, avatar, badge, formatTime, isConfidential, labelCategory } from "../ui.js";
+import { h, icon, avatar, badge, formatTime, isConfidential, labelCategory, labelDestination } from "../ui.js";
 
 const tones = ["purple", "blue", "orange", "green", "lime"];
 const priority = { ALTA: 0, MODERADA: 1, BAIXA: 2 };
 
-function renderOverview({ data, serie, relatosNovos = null, onNavigate }) {
+function renderOverview({ data, serie, relatosNovos = null, userName = "", onNavigate }) {
   const { kpis, alertas, colaboradores } = data;
   const greeting = greetingText();
   const heading = h("section", { className: "page-heading overview-heading" },
-    h("div", {}, h("span", { className: "eyebrow" }, todayLabel()), h("h1", {}, `${greeting}, Fernanda.`), h("p", {}, "Acompanhe a jornada e os sinais que precisam de atenção.")));
+    h("div", {}, h("span", { className: "eyebrow" }, todayLabel()), h("h1", {}, userName ? `${greeting}, ${userName.trim().split(/\s+/)[0]}.` : `${greeting}.`), h("p", {}, "Acompanhe a jornada e os sinais que precisam de atenção.")));
 
   const metrics = h("section", { className: "overview-metrics", "aria-label": "Indicadores da equipe" },
     metric("people", "dark", "Em jornada", kpis.emJornada, "nos primeiros 90 dias"),
@@ -50,7 +50,7 @@ function alertRow(item, colaboradores) {
   const confidential = isConfidential(item);
   return h("div", { className: "overview-alert-row" },
     avatar(confidential ? "" : person?.iniciais || "RH", confidential ? "lime" : tones[Math.max(0, colaboradores.indexOf(person)) % tones.length]),
-    h("div", {}, h("strong", {}, confidential ? item.protocolo : person?.nome || item.protocolo), h("small", {}, `${labelCategory(item.categoria)} · ${item.destino === "RH" ? "RH" : "Gerente"}`)),
+    h("div", {}, h("strong", {}, confidential ? item.protocolo : person?.nome || item.protocolo), h("small", {}, `${labelCategory(item.categoria)} · ${labelDestination(item.destino)}`)),
     badge(item.severidade === "ALTA" ? "Alta" : item.severidade === "MODERADA" ? "Atenção" : "Baixa", `severity severity-${item.severidade.toLowerCase()}`),
     h("small", { className: "overview-age" }, formatTime(item.criadoEm)));
 }

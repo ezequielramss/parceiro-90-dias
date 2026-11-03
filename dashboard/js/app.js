@@ -1,4 +1,4 @@
-import { getDashboardData, getPerfil, getRelatos, getSerieMensal, getBemestar } from "./api.js";
+import { USE_MOCK, getDashboardData, getPerfil, getRelatos, getSerieMensal, getBemestar, login, logout } from "./api.js";
 import { h, icon } from "./ui.js";
 import { renderEmployees } from "./views/funcionarios.js";
 import { renderAlerts } from "./views/alertas.js";
@@ -12,7 +12,7 @@ const routes = [
   ["#/alertas", "Alertas", "warning"], ["#/relatos", "Relatos", "inbox"],
   ["#/bem-estar", "Bem-estar", "heart"], ["#/relatorios", "Relatórios", "chart"]
 ];
-const state = { data: null, profile: null, query: "", employeeId: null, alertId: null, reportId: null, wellbeingId: null, detailsOpen: true, pageData: {}, loadingPage: "", pageError: "" };
+const state = { data: null, profile: null, user: null, needsLogin: false, loginError: "", loginEmail: "", signingIn: false, query: "", employeeId: null, alertId: null, reportId: null, wellbeingId: null, detailsOpen: true, pageData: {}, loadingPage: "", pageError: "" };
 const root = document.querySelector("#app");
 
 function currentRoute() {
@@ -24,14 +24,63 @@ function navLink([path, label, symbol], active, count) {
   return h("a", { className: `nav-item ${active === path ? "active" : ""}`, href: path, "aria-current": active === path ? "page" : null }, icon(symbol), h("span", {}, label), label === "Alertas" && count ? h("em", { "aria-label": `${count} alertas sem retorno` }, count) : null);
 }
 
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ""}`.toLocaleUpperCase("pt-BR");
+}
+
+function loginScreen() {
+  const email = h("input", { id: "login-email", type: "email", name: "email", autocomplete: "username", required: true, maxlength: 320, value: state.loginEmail });
+  const password = h("input", { id: "login-senha", type: "password", name: "senha", autocomplete: "current-password", required: true, maxlength: 256 });
+  const submit = h("button", { type: "submit", className: "button button-primary login-submit", disabled: state.signingIn }, state.signingIn ? "Entrando..." : "Entrar");
+  const form = h("form", { className: "panel login-panel", "aria-labelledby": "login-title", novalidate: true },
+    h("div", { className: "brand login-brand" }, h("span", { className: "brand-mark" }, h("img", { src: "img/mcdonalds-logo.svg", alt: "" })), h("div", {}, h("strong", {}, "Kallopolli"), h("small", {}, "Pessoas & Cultura"))),
+    h("h1", { id: "login-title" }, "Entrar no painel"),
+    h("p", { className: "login-help" }, "Use o e-mail e a senha cadastrados pelo RH."),
+    h("label", { className: "login-field", for: "login-email" }, h("span", {}, "E-mail"), email),
+    h("label", { className: "login-field", for: "login-senha" }, h("span", {}, "Senha"), password),
+    state.loginError ? h("p", { className: "login-error", role: "alert" }, state.loginError) : null,
+    submit);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (state.signingIn) return;
+    state.loginEmail = email.value.trim();
+    if (!state.loginEmail || !password.value) { state.loginError = "Informe o e-mail e a senha."; render(); root.querySelector(state.loginEmail ? "#login-senha" : "#login-email")?.focus(); return; }
+    state.signingIn = true; state.loginError = ""; render();
+    try {
+      await login(state.loginEmail, password.value);
+      state.needsLogin = false; state.loginEmail = "";
+      await start();
+    } catch (error) {
+      state.loginError = error.message;
+    } finally {
+      state.signingIn = false;
+      if (state.needsLogin) { render(); root.querySelector("#login-senha")?.focus(); }
+    }
+  });
+  return h("main", { className: "login-page" }, form);
+}
+
+function askLogin() {
+  state.needsLogin = true; state.data = null; state.profile = null; state.user = null; state.pageData = {}; state.pageError = ""; state.loadingPage = "";
+  render();
+  root.querySelector("#login-email")?.focus();
+}
+
+async function signOut() {
+  try { await logout(); } finally { askLogin(); }
+}
+
 function render() {
+  if (state.needsLogin) { root.replaceChildren(loginScreen()); return; }
   const path = currentRoute();
   const active = routes.find(([route]) => route === path);
   const nav = h("nav", { className: "nav-list", "aria-label": "Navegação principal" }, h("span", { className: "nav-label" }, "MENU"), ...routes.map((route) => navLink(route, path, state.data?.kpis.semRetorno24h)));
   const mobileNav = h("nav", { className: "mobile-nav", "aria-label": "Navegação principal" }, ...routes.map((route) => navLink(route, path, state.data?.kpis.semRetorno24h)));
   const sidebar = h("aside", { className: "sidebar" },
     h("div", { className: "brand" }, h("span", { className: "brand-mark" }, h("img", { src: "img/mcdonalds-logo.svg", alt: "" })), h("div", {}, h("strong", {}, "Kallopolli"), h("small", {}, "Pessoas & Cultura"))),
-    nav, h("div", { className: "profile" }, h("span", { className: "avatar avatar-lime", "aria-hidden": "true" }, "FR"), h("div", {}, h("strong", {}, "Fernanda Rocha"), h("small", {}, state.profile === "GERENTE" ? "Gerente" : "Gestora de RH")), h("span", { className: "more", "aria-hidden": "true" }, "•••")));
+    nav, profileBlock());
   const search = h("label", { className: "search" }, icon("search"), h("input", { type: "search", value: state.query, placeholder: "Buscar funcionário ou alerta...", "aria-label": "Buscar funcionário ou alerta" }), h("kbd", {}, "Ctrl K"));
   search.querySelector("input").addEventListener("input", (event) => { state.query = event.currentTarget.value; render(); const field = root.querySelector(".topbar .search input"); field?.focus(); field?.setSelectionRange(state.query.length, state.query.length); });
   const topbar = h("header", { className: "topbar" }, h("div", { className: "mobile-brand" }, h("span", { className: "brand-mark" }, h("img", { src: "img/mcdonalds-logo.svg", alt: "" })), h("strong", {}, "Kallopolli")), search, h("button", { type: "button", className: "icon-button", "aria-label": "Notificações" }, icon("bell"), h("span", {})));
@@ -41,7 +90,7 @@ function render() {
   else if (!state.data || state.loadingPage === path || (waitingForExtraData && !state.pageData[path])) content = loadingCard();
   else if (path === "#/visao-geral") {
     const extra = state.pageData[path];
-    content = renderOverview({ data: state.data, serie: extra.serie, relatosNovos: state.profile === "RH" ? extra.relatos.filter((item) => item.status === "NOVO").length : null, onNavigate: navigate });
+    content = renderOverview({ data: state.data, serie: extra.serie, relatosNovos: state.profile === "RH" ? extra.relatos.filter((item) => item.status === "NOVO").length : null, userName: state.user?.nome, onNavigate: navigate });
   } else if (path === "#/funcionarios") content = renderEmployees({ data: state.data, query: state.query, selectedId: state.employeeId, onSelect: (id) => { state.employeeId = id; state.detailsOpen = true; render(); }, detailsOpen: state.detailsOpen, onClose: closeDetails });
   else if (path === "#/alertas") content = renderAlerts({ data: state.data, query: state.query, selectedId: state.alertId, onSelect: (id) => { state.alertId = id; state.detailsOpen = true; render(); }, detailsOpen: state.detailsOpen, onClose: closeDetails });
   else if (path === "#/relatos") content = renderRelatos({ profile: state.profile, reports: state.profile === "RH" ? state.pageData[path]?.relatos || [] : [], query: state.query, selectedId: state.reportId, detailsOpen: state.detailsOpen, onSelect: (id) => { state.reportId = id; state.detailsOpen = true; render(); }, onClose: closeDetails, onUpdate: render });
@@ -49,6 +98,14 @@ function render() {
   else if (path === "#/relatorios") content = renderRelatorios({ serie: state.pageData[path].serie, colaboradores: state.data.colaboradores, kpis: state.data.kpis, onUpdate: render });
   else content = placeholder(active?.[1] || "Página", path);
   root.replaceChildren(sidebar, h("main", { className: "main" }, topbar, mobileNav, h("div", { className: "content" }, content)));
+}
+
+function profileBlock() {
+  const role = state.profile === "GERENTE" ? "Gerente" : state.profile === "RH" ? "RH" : "";
+  const name = state.user?.nome || role || "Painel";
+  const exit = USE_MOCK ? h("span", { className: "more", "aria-hidden": "true" }, "•••") : h("button", { type: "button", className: "sign-out", "aria-label": "Sair do painel" }, "Sair");
+  if (!USE_MOCK) exit.addEventListener("click", signOut);
+  return h("div", { className: "profile" }, h("span", { className: "avatar avatar-lime", "aria-hidden": "true" }, initials(name)), h("div", {}, h("strong", {}, name), h("small", {}, state.profile === "GERENTE" && state.user?.loja ? `Gerente · ${state.user.loja}` : role)), exit);
 }
 
 function loadingCard() { return h("section", { className: "placeholder", "aria-live": "polite" }, h("article", { className: "panel" }, h("p", {}, "Carregando dados..."))); }
@@ -72,7 +129,10 @@ async function loadPageData(path) {
     else if (path === "#/bem-estar") state.pageData[path] = { bemestar: await getBemestar(state.profile) };
     else if (path === "#/relatorios") state.pageData[path] = { serie: await getSerieMensal() };
     else state.pageData[path] = {};
-  } catch (error) { state.pageError = error.message; }
+  } catch (error) {
+    if (error.status === 401) { state.loadingPage = ""; askLogin(); return; }
+    state.pageError = error.message;
+  }
   finally { state.loadingPage = ""; if (currentRoute() === path) render(); }
 }
 
@@ -91,12 +151,22 @@ document.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); root.querySelector(".topbar .search input")?.focus(); }
 });
 
-render();
-getPerfil().then(async (profile) => {
-  state.profile = profile;
-  state.data = await getDashboardData();
-  state.employeeId = state.data.colaboradores[0]?.id;
-  state.alertId = state.data.alertas[0]?.id;
+/** Perfil primeiro: sem sessão (401), mostra a tela de login e não pede mais nada. */
+async function start() {
   render();
-  await loadPageData(currentRoute());
-}).catch((error) => { state.pageError = error.message; state.loadingPage = ""; render(); });
+  try {
+    const user = await getPerfil();
+    state.user = user;
+    state.profile = user.perfil;
+    state.data = await getDashboardData();
+    state.employeeId = state.data.colaboradores[0]?.id;
+    state.alertId = state.data.alertas[0]?.id;
+    render();
+    await loadPageData(currentRoute());
+  } catch (error) {
+    if (error.status === 401) { askLogin(); return; }
+    state.pageError = error.message; state.loadingPage = ""; render();
+  }
+}
+
+start();

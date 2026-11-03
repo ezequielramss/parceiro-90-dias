@@ -1,25 +1,53 @@
-const USE_MOCK = true;
+// Dados reais do backend por padrão. ?mock=1 na URL usa os JSON fictícios de mock/, para demonstrar sem backend.
+const USE_MOCK = new URLSearchParams(window.location.search).get("mock") === "1";
 const MOCK_BASE = "mock";
 const MOCK_PERFIL = "RH";
+const MOCK_USUARIO = { perfil: MOCK_PERFIL, nome: "Fernanda Rocha", loja: null };
+const SESSAO_EXPIRADA = "Sua sessão expirou. Entre novamente para continuar.";
+
+function erroComStatus(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+async function mensagemDoServidor(response, padrao) {
+  try {
+    const body = await response.json();
+    if (typeof body?.erro?.mensagem === "string") return body.erro.mensagem;
+  } catch { /* corpo sem JSON */ }
+  return padrao;
+}
 
 async function request(path, mockFile, options = {}) {
   const headers = { Accept: "application/json", ...options.headers };
-  const response = await fetch(USE_MOCK ? `${MOCK_BASE}/${mockFile}` : path, { ...options, headers });
-  if (response.status === 401) {
-    const error = new Error("Sua sessão expirou. Entre novamente para continuar.");
-    error.status = 401;
-    throw error;
-  }
-  if (!response.ok) throw new Error(`Não foi possível carregar os dados (${response.status}).`);
+  const response = await fetch(USE_MOCK ? `${MOCK_BASE}/${mockFile}` : path, { credentials: "same-origin", ...options, headers });
+  if (response.status === 401) throw erroComStatus(SESSAO_EXPIRADA, 401);
+  if (!response.ok) throw erroComStatus(await mensagemDoServidor(response, `Não foi possível carregar os dados (${response.status}).`), response.status);
+  if (response.status === 204) return null;
   return response.json();
+}
+
+async function login(email, senha) {
+  const response = await fetch("/api/login", {
+    method: "POST", credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ email, senha })
+  });
+  if (!response.ok) throw erroComStatus(await mensagemDoServidor(response, "Não foi possível entrar agora. Tente novamente."), response.status);
+  return response.json();
+}
+async function logout() {
+  if (USE_MOCK) return;
+  await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
 }
 
 function getKpis() { return request("/api/kpis", "kpis.json"); }
 function getColaboradores() { return request("/api/colaboradores", "colaboradores.json"); }
+/** { perfil: "RH" | "GERENTE", nome, loja }. Sem sessão, lança erro com status 401. */
 async function getPerfil() {
-  if (USE_MOCK) return MOCK_PERFIL;
-  const result = await request("/api/perfil");
-  return typeof result === "string" ? result : result.perfil;
+  if (USE_MOCK) return MOCK_USUARIO;
+  return request("/api/perfil");
 }
 async function getLinhaDoTempo(id) {
   if (!USE_MOCK) return request(`/api/colaboradores/${encodeURIComponent(id)}/linha-do-tempo`);
@@ -48,11 +76,10 @@ async function getBemestar(profile = MOCK_PERFIL) {
   };
 }
 function getSerieMensal() { return request("/api/kpis/serie-mensal", "serie-mensal.json"); }
-async function gerarRelatorio({ escopo, publico, colaboradorId }) {
-  if (!USE_MOCK) return request("/api/relatorios/gerar", undefined, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ escopo, publico, colaboradorId })
-  });
+/** Geração de relatório só existe no modo de demonstração (fora do MVP no backend). */
+const RELATORIOS_DISPONIVEIS = USE_MOCK;
+async function gerarRelatorio() {
+  if (!USE_MOCK) throw new Error("Indisponível nesta versão.");
   await new Promise((resolve) => window.setTimeout(resolve, 800));
   return request("/api/relatorios/gerar", "relatorio-exemplo.json");
 }
@@ -61,4 +88,4 @@ async function getDashboardData() {
   return { kpis, colaboradores, alertas };
 }
 
-export { USE_MOCK, getKpis, getColaboradores, getLinhaDoTempo, getPerfil, getAlertas, getRelatos, getBemestar, getSerieMensal, gerarRelatorio, getDashboardData };
+export { USE_MOCK, RELATORIOS_DISPONIVEIS, login, logout, getKpis, getColaboradores, getLinhaDoTempo, getPerfil, getAlertas, getRelatos, getBemestar, getSerieMensal, gerarRelatorio, getDashboardData };

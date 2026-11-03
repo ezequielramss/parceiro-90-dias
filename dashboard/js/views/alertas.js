@@ -1,4 +1,4 @@
-import { h, icon, avatar, badge, formatTime, formatDate, formatDuration, isConfidential, labelCategory } from "../ui.js";
+import { h, icon, avatar, badge, formatTime, formatDate, formatDuration, isConfidential, labelCategory, labelDestination } from "../ui.js";
 
 const statusLabels = { ABERTO: "Aberto", ATENDIDO: "Atendido", SEM_RETORNO_24H: "Sem retorno 24h" };
 const severityLabels = { BAIXA: "Baixa", MODERADA: "Atenção", ALTA: "Alta" };
@@ -28,7 +28,7 @@ function renderAlerts({ data, query = "", selectedId, onSelect, detailsOpen = tr
     const visible = alertas.filter((item) => {
       const person = colaboradores.find((person) => person.id === item.colaboradorId);
       const safeName = isConfidential(item) ? item.protocolo : `${item.protocolo} ${person?.nome || ""} ${person?.loja || ""}`;
-      return (statusFilter === "TODOS" || item.status === statusFilter) && (!destinationFilter || item.destino === destinationFilter) && `${safeName} ${item.categoria} ${item.destino}`.toLocaleLowerCase("pt-BR").includes(term);
+      return (statusFilter === "TODOS" || item.status === statusFilter) && (!destinationFilter || item.destino === destinationFilter || item.destino === "GERENTE_E_RH") && `${safeName} ${item.categoria} ${item.destino}`.toLocaleLowerCase("pt-BR").includes(term);
     });
     list.replaceChildren();
     if (!visible.length) { list.append(h("p", { className: "empty-state" }, "Nenhum alerta encontrado.")); return; }
@@ -39,7 +39,7 @@ function renderAlerts({ data, query = "", selectedId, onSelect, detailsOpen = tr
       const tone = tones[Math.max(0, colaboradores.findIndex((p) => p.id === person?.id)) % tones.length];
       const row = h("button", { type: "button", className: `alert-row ${item.id === selected?.id ? "selected" : ""}`, role: "listitem", "aria-label": `Abrir alerta ${item.protocolo}${confidential ? " confidencial" : ` de ${name}`}`, dataset: { id: item.id } },
         avatar(confidential ? "" : (person?.iniciais || "RH"), confidential ? "lime" : tone),
-        h("span", { className: "alert-main" }, h("strong", {}, confidential ? item.protocolo : name), h("small", {}, confidential ? "Acesso restrito ao RH" : `${person?.loja || "Unidade"} · ${person?.funcao || "Colaborador"}`), h("span", { className: "alert-tags" }, badge(labelCategory(item.categoria), "severity"), badge(severityLabels[item.severidade] || item.severidade, `severity severity-${item.severidade.toLowerCase()}`), badge(item.destino === "RH" ? "RH" : "Gerente", "severity severity-moderada"), badge(statusLabels[item.status], `status-badge status-${item.status.toLowerCase()}`), badge(returnLabels[item.retorno] || "Aguardando", "return-badge"))),
+        h("span", { className: "alert-main" }, h("strong", {}, confidential ? item.protocolo : name), h("small", {}, confidential ? "Acesso restrito ao RH" : `${person?.loja || "Unidade"} · ${person?.funcao || "Colaborador"}`), h("span", { className: "alert-tags" }, badge(labelCategory(item.categoria), "severity"), badge(severityLabels[item.severidade] || item.severidade, `severity severity-${item.severidade.toLowerCase()}`), badge(labelDestination(item.destino), "severity severity-moderada"), badge(statusLabels[item.status], `status-badge status-${item.status.toLowerCase()}`), badge(returnLabels[item.retorno] || "Aguardando", "return-badge"))),
         h("span", { className: "alert-age" }, icon("clock", 13), formatTime(item.criadoEm), h("small", {}, `Até retorno: ${formatDuration(item)}`)));
       row.addEventListener("click", () => onSelect(item.id));
       list.append(row);
@@ -72,7 +72,7 @@ function renderDetail(item, colaboradores, onClose) {
   return h("aside", { className: "panel alert-detail", "aria-label": `Detalhes do alerta ${item.protocolo}` },
     h("button", { type: "button", className: "close-detail", "aria-label": "Fechar detalhes", onClick: onClose }, icon("close", 17)),
     h("span", { className: "eyebrow" }, confidential ? "ALERTA CONFIDENCIAL" : "DETALHE DO ALERTA"),
-    h("h2", {}, item.protocolo), h("p", { className: "detail-subtitle" }, `${labelCategory(item.categoria)} · ${severityLabels[item.severidade] || item.severidade} · ${item.destino === "RH" ? "RH" : "Gerente"}`),
+    h("h2", {}, item.protocolo), h("p", { className: "detail-subtitle" }, `${labelCategory(item.categoria)} · ${severityLabels[item.severidade] || item.severidade} · ${labelDestination(item.destino)}`),
     confidential ? h("div", { className: "detail-alert confidential" }, icon("lock", 17), h("div", {}, h("strong", {}, "Informação confidencial"), h("p", {}, "A identidade da pessoa não é exibida neste painel."))) : h("p", { className: "detail-subtitle" }, `${person?.nome || "Colaborador"} · ${person?.loja || "Unidade"}`),
     h("div", { className: "recommendation" }, icon("sparkles", 18), h("span", {}, item.sugestao)),
     h("section", { className: "timeline" }, h("h3", {}, "Linha do tempo"), ...timeline.map(([title, subtitle, done]) => h("div", { className: `timeline-item ${done ? "done" : ""}` }, h("span", { className: "timeline-dot", "aria-hidden": "true" }), h("div", {}, h("strong", {}, title), h("small", {}, subtitle))))),
