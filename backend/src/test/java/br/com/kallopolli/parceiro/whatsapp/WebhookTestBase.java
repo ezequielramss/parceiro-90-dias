@@ -39,6 +39,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
         "DATABASE_URL=jdbc:postgresql://127.0.0.1:1/nao-usado",
         "DATABASE_USER=usuario-falso",
         "DATABASE_PASSWORD=" + WebhookTestBase.SENHA_BANCO_FALSA,
+        "GEMINI_API_KEY=" + WebhookTestBase.CHAVE_GEMINI_FALSA,
+        "GEMINI_MODEL=modelo-falso",
         "management.health.db.enabled=false",
         "whatsapp.read-timeout=500ms"
 })
@@ -51,6 +53,7 @@ abstract class WebhookTestBase {
     static final String VERIFY_TOKEN_FALSO = "verify-falso-de-teste";
     static final String APP_SECRET_FALSO = "APP-SECRET-FALSO-DE-TESTE-41b2";
     static final String SENHA_BANCO_FALSA = "SENHA-BANCO-FALSA-DE-TESTE-9d0e";
+    static final String CHAVE_GEMINI_FALSA = "CHAVE-GEMINI-FALSA-DE-TESTE-5c1a";
 
     static final GraphApiFalsa GRAPH_API;
 
