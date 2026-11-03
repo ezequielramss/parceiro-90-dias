@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.kallopolli.parceiro.jornada.Colaborador;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,7 +55,8 @@ class JdbcRepositoriosTest {
     @Test
     void buscaColaboradorAtivoPeloTelefone() {
         comColaborador(repos -> {
-            assertThat(repos.buscarAtivoPorTelefone(TELEFONE)).contains(new Colaborador(ID, TELEFONE));
+            assertThat(repos.buscarAtivoPorTelefone(TELEFONE)).get()
+                    .satisfies(c -> assertThat(List.of(c.id(), c.telefone(), c.loja())).containsExactly(ID, TELEFONE, "Loja Teste"));
             assertThat(repos.buscarAtivoPorTelefone("+5500000000999")).isEmpty();
 
             jdbc.sql("update public.colaboradores set ativo = false where id = :id").param("id", ID).update();
@@ -65,8 +67,8 @@ class JdbcRepositoriosTest {
     @Test
     void wamidRepetidoNaoGravaDeNovo() {
         comColaborador(repos -> {
-            assertThat(repos.registrarEntrada("wamid.JDBC-1", ID, "text", "texto ficticio")).isTrue();
-            assertThat(repos.registrarEntrada("wamid.JDBC-1", ID, "text", "texto ficticio")).isFalse();
+            assertThat(repos.registrarEntrada("wamid.JDBC-1", ID, "text", "texto ficticio")).isPresent();
+            assertThat(repos.registrarEntrada("wamid.JDBC-1", ID, "text", "texto ficticio")).isEmpty();
             assertThat(jdbc.sql("select count(*) from public.mensagens where wamid = 'wamid.JDBC-1'")
                     .query(Integer.class).single()).isEqualTo(1);
         });

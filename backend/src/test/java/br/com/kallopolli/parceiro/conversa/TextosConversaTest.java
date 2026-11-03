@@ -38,6 +38,7 @@ class TextosConversaTest {
     static List<String> todosOsTextos() {
         List<String> textos = new ArrayList<>(List.of(
                 TextosConversa.boasVindas(),
+                TextosConversa.conviteRelato(),
                 TextosConversa.relatoEncaminhado(),
                 TextosConversa.nadaEnviado(),
                 TextosConversa.relatoUrgente(),
@@ -255,6 +256,7 @@ class TextosConversaTest {
                 TextosConversa.respostaNota(1),
                 TextosConversa.respostaNota(3),
                 TextosConversa.respostaNota(4),
+                TextosConversa.conviteRelato(),
                 TextosConversa.relatoEncaminhado(),
                 TextosConversa.nadaEnviado(),
                 TextosConversa.relatoUrgente(),

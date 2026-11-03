@@ -23,7 +23,7 @@ import org.springframework.http.MediaType;
 
 /** Nenhum segredo, texto de mensagem ou telefone aparece no log, nem nos caminhos de erro. */
 @ExtendWith(OutputCaptureExtension.class)
-class LogsSemSegredosTest extends WebhookTestBase {
+class LogsSemSegredosTest extends FluxoTestBase {
 
     private static final String NUMERO = "5500999990000";
     private static final String TEXTO = "texto ficticio de teste";
@@ -126,6 +126,28 @@ class LogsSemSegredosTest extends WebhookTestBase {
 
         assertThat(saida.getAll()).contains("falha ao classificar relato", "\"status_http\":429", "RespostaInvalida");
         assertThat(saida.getAll()).doesNotContain(CHAVE_GEMINI_FALSA, motivo, "ACAO-FICTICIA");
+        semSegredos(saida);
+    }
+
+    @Test
+    void fluxoCompletoNaoLogaRelatoTelefoneNomeNemMotivo(CapturedOutput saida) throws Exception {
+        String relato = "RELATO-FICTICIO-QUE-NAO-PODE-IR-PARA-LOG";
+        cenario(saida);
+        agendador(br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria.INICIO).tick();
+        texto(saida, "3");
+        texto(saida, relato);
+        tocar(saida, COLABORADOR, "conf:" + ultimoRelato().id() + ":sim");
+        String botao = para(enviadas(), GERENTE).get(0).botoes().get(0);
+        tocar(saida, GERENTE, botao);
+        GRAPH_API.fecharJanela(RH);
+        classificador.sempre(br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.categoria("ASSEDIO"));
+        texto(saida, relato + " grave");
+
+        assertThat(saida.getAll()).contains("HUMOR_REGISTRADO", "AGUARDANDO_CONFIRMACAO", "ENCAMINHADO",
+                "CONVERSEI", "URGENTE", "falha ao enviar alerta");
+        assertThat(saida.getAll()).doesNotContain(relato, COLABORADOR, GERENTE, RH, "Pessoa Ficticia",
+                "Responsavel Ficticio", br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.MOTIVO,
+                br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.ACAO);
         semSegredos(saida);
     }
 
