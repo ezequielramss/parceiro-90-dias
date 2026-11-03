@@ -15,6 +15,9 @@ parceiro:
     url: ${DATABASE_URL}
     usuario: ${DATABASE_USER}
     senha: ${DATABASE_PASSWORD}
+  # Check-in dos dias 1 a 10, a cada minuto (H04). Desligue com false (ex.: em testes).
+  checkin:
+    ativo: true
 
 whatsapp:
   token: ${WHATSAPP_TOKEN}

@@ -2,9 +2,10 @@ package br.com.kallopolli.parceiro.whatsapp;
 
 import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.jornada.MensagemRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
-/** Envia texto a um colaborador e grava a mensagem de saída. */
+/** Envia mensagens a um colaborador e grava a mensagem de saída. */
 @Service
 public class MensageiroWhatsApp {
 
@@ -18,7 +19,15 @@ public class MensageiroWhatsApp {
 
     /** @throws WhatsAppClientException se a Graph API recusar ou não responder */
     public void enviar(Colaborador colaborador, String texto) {
-        String wamid = client.enviarTexto(colaborador.numeroWhatsApp(), texto);
+        registrar(colaborador, client.enviarTexto(colaborador.numeroWhatsApp(), texto), texto);
+    }
+
+    /** Mensagem com botões de resposta. @throws WhatsAppClientException se a Graph API recusar */
+    public void enviarBotoes(Colaborador colaborador, String corpo, List<Botao> botoes) {
+        registrar(colaborador, client.enviarBotoes(colaborador.numeroWhatsApp(), corpo, botoes), corpo);
+    }
+
+    private void registrar(Colaborador colaborador, String wamid, String texto) {
         if (wamid != null) {
             mensagens.registrarSaida(wamid, colaborador.id(), texto);
         }

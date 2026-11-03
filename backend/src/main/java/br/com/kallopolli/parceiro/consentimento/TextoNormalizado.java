@@ -4,11 +4,11 @@ import java.text.Normalizer;
 import java.util.Locale;
 
 /** Normaliza respostas curtas: sem acento, minúsculas, sem pontuação nem espaços nas pontas. */
-final class TextoNormalizado {
+public final class TextoNormalizado {
 
     private TextoNormalizado() {}
 
-    static String normalizar(String texto) {
+    public static String normalizar(String texto) {
         if (texto == null) {
             return "";
         }

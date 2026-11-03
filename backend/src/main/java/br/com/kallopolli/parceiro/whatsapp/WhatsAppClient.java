@@ -2,6 +2,7 @@ package br.com.kallopolli.parceiro.whatsapp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import java.util.Map;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
@@ -45,12 +46,36 @@ public class WhatsAppClient {
      * @throws WhatsAppClientException se a Meta recusar ou a rede falhar
      */
     public String enviarTexto(String para, String texto) {
-        var corpo = Map.of(
+        return enviar(Map.of(
                 "messaging_product", "whatsapp",
                 "recipient_type", "individual",
                 "to", para,
                 "type", "text",
-                "text", Map.of("preview_url", false, "body", texto));
+                "text", Map.of("preview_url", false, "body", texto)));
+    }
+
+    /**
+     * Envia uma mensagem interativa com até 3 botões de resposta e devolve o wamid.
+     * O toque chega no webhook como type "interactive", com o id do botão.
+     *
+     * @throws WhatsAppClientException se a Meta recusar (por exemplo, janela de 24 horas fechada)
+     */
+    public String enviarBotoes(String para, String corpoTexto, List<Botao> botoes) {
+        var opcoes = botoes.stream()
+                .map(b -> Map.of("type", "reply", "reply", Map.of("id", b.id(), "title", b.titulo())))
+                .toList();
+        return enviar(Map.of(
+                "messaging_product", "whatsapp",
+                "recipient_type", "individual",
+                "to", para,
+                "type", "interactive",
+                "interactive", Map.of(
+                        "type", "button",
+                        "body", Map.of("text", corpoTexto),
+                        "action", Map.of("buttons", opcoes))));
+    }
+
+    private String enviar(Map<String, Object> corpo) {
         try {
             JsonNode resposta = restClient.post()
                     .uri(caminhoMensagens)
