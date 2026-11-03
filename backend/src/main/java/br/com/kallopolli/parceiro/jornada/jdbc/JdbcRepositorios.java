@@ -5,8 +5,11 @@ import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.jornada.ColaboradorRepository;
 import br.com.kallopolli.parceiro.jornada.ConsentimentoRepository;
 import br.com.kallopolli.parceiro.jornada.MensagemRepository;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -21,12 +24,35 @@ public class JdbcRepositorios
         this.jdbc = jdbc;
     }
 
+    private static final String COLUNAS_COLABORADOR = "c.id, c.telefone, c.nome, c.loja, c.turno, c.data_inicio";
+
+    private static final RowMapper<Colaborador> COLABORADOR = (rs, n) -> new Colaborador(
+            rs.getObject("id", UUID.class),
+            rs.getString("telefone"),
+            rs.getString("nome"),
+            rs.getString("loja"),
+            rs.getString("turno"),
+            rs.getObject("data_inicio", LocalDate.class));
+
     @Override
     public Optional<Colaborador> buscarAtivoPorTelefone(String telefoneE164) {
-        return jdbc.sql("select id, telefone from public.colaboradores where telefone = :telefone and ativo")
+        return jdbc.sql("select " + COLUNAS_COLABORADOR + " from public.colaboradores c where c.telefone = :telefone and c.ativo")
                 .param("telefone", telefoneE164)
-                .query((rs, n) -> new Colaborador(rs.getObject("id", UUID.class), rs.getString("telefone")))
+                .query(COLABORADOR)
                 .optional();
+    }
+
+    @Override
+    public List<Colaborador> ativosComAceiteIniciadosEntre(LocalDate de, LocalDate ate) {
+        return jdbc.sql("""
+                        select %s from public.colaboradores c
+                        where c.ativo and c.data_inicio between :de and :ate
+                          and exists (select 1 from public.consentimentos k
+                                      where k.colaborador_id = c.id and k.retirado_em is null)""".formatted(COLUNAS_COLABORADOR))
+                .param("de", de)
+                .param("ate", ate)
+                .query(COLABORADOR)
+                .list();
     }
 
     @Override
@@ -61,8 +87,8 @@ public class JdbcRepositorios
     }
 
     @Override
-    public boolean registrarEntrada(String wamid, UUID colaboradorId, String tipo, String texto) {
-        return inserirMensagem(wamid, colaboradorId, "ENTRADA", tipo, texto) == 1;
+    public Optional<Long> registrarEntrada(String wamid, UUID colaboradorId, String tipo, String texto) {
+        return inserirMensagem(wamid, colaboradorId, "ENTRADA", tipo, texto);
     }
 
     @Override
@@ -70,17 +96,19 @@ public class JdbcRepositorios
         inserirMensagem(wamid, colaboradorId, "SAIDA", "text", texto);
     }
 
-    private int inserirMensagem(String wamid, UUID colaboradorId, String direcao, String tipo, String texto) {
+    private Optional<Long> inserirMensagem(String wamid, UUID colaboradorId, String direcao, String tipo, String texto) {
         return jdbc.sql("""
                         insert into public.mensagens (wamid, colaborador_id, direcao, tipo, texto)
                         values (:wamid, :colaborador, :direcao, :tipo, :texto)
-                        on conflict (wamid) do nothing""")
+                        on conflict (wamid) do nothing
+                        returning id""")
                 .param("wamid", wamid)
                 .param("colaborador", colaboradorId)
                 .param("direcao", direcao)
                 .param("tipo", tipo)
                 .param("texto", texto)
-                .update();
+                .query(Long.class)
+                .optional();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package br.com.kallopolli.parceiro.consentimento;
 
+import br.com.kallopolli.parceiro.conversa.TextosConversa;
 import br.com.kallopolli.parceiro.jornada.AuditoriaRepository;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.jornada.ConsentimentoRepository;
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Service;
  *   <li>"parar" (qualquer caixa, com ou sem acento e pontuação) retira o aceite e confirma;
  *   <li>sem aceite ativo, "aceito" registra o aceite com o texto do termo;
  *   <li>sem aceite ativo, qualquer outra mensagem recebe o pedido de aceite;
- *   <li>com aceite ativo, a mensagem fica registrada para a classificação (próxima história).
+ *   <li>depois do aceite, envia as boas-vindas (H03);
+ *   <li>com aceite ativo, devolve REGISTRADA e a conversa segue no OrquestradorConversa.
  * </ul>
  */
 @Service
@@ -52,7 +54,7 @@ public class FluxoConsentimento {
         if (ACEITO.equals(resposta)) {
             long id = consentimentos.registrarAceite(colaborador.id(), Textos.TERMO_V1);
             auditoria.registrar(quem(colaborador), "CONSENTIMENTO_ACEITO", "consentimento/" + id);
-            mensageiro.enviar(colaborador, Textos.CONFIRMACAO_ACEITE);
+            mensageiro.enviar(colaborador, TextosConversa.boasVindas());
             return Resultado.ACEITE;
         }
 

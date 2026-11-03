@@ -3,6 +3,8 @@ package br.com.kallopolli.parceiro.whatsapp;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import br.com.kallopolli.parceiro.classificacao.CategoriasEmMemoria;
+import br.com.kallopolli.parceiro.classificacao.ClassificadorFalso;
 import br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +44,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
         "GEMINI_API_KEY=" + WebhookTestBase.CHAVE_GEMINI_FALSA,
         "GEMINI_MODEL=modelo-falso",
         "management.health.db.enabled=false",
+        "parceiro.checkin.ativo=false",
         "whatsapp.read-timeout=500ms"
 })
 @AutoConfigureMockMvc
@@ -72,6 +75,18 @@ abstract class WebhookTestBase {
         RepositoriosEmMemoria repositoriosEmMemoria() {
             return new RepositoriosEmMemoria();
         }
+
+        @Bean
+        @Primary
+        CategoriasEmMemoria categoriasEmMemoria() {
+            return new CategoriasEmMemoria();
+        }
+
+        @Bean
+        @Primary
+        ClassificadorFalso classificadorFalso() {
+            return new ClassificadorFalso();
+        }
     }
 
     @DynamicPropertySource
@@ -85,10 +100,15 @@ abstract class WebhookTestBase {
     @Autowired
     RepositoriosEmMemoria repositorios;
 
+    @Autowired
+    ClassificadorFalso classificador;
+
     @BeforeEach
     void limparEstado() {
         repositorios.limpar();
-        GRAPH_API.responder(200, "{\"messages\":[{\"id\":\"wamid.RESPOSTA\"}]}");
+        classificador.limpar();
+        GRAPH_API.responder(200, GraphApiFalsa.WAMID_GERADO);
+        GRAPH_API.reabrirJanelas();
         GRAPH_API.atrasar(0);
         GRAPH_API.recebidas().clear();
     }
@@ -121,6 +141,28 @@ abstract class WebhookTestBase {
                   "messages":[{"from":"%s","id":"%s","timestamp":"1700000000","type":"text","text":{"body":"%s"}}]
                 }}]}]}
                 """.formatted(PHONE_NUMBER_ID_FALSO, de, de, wamid, texto);
+    }
+
+    /** Toque em botão de resposta, no formato que a Meta envia; número fictício. */
+    static String payloadBotao(String wamid, String de, String botaoId, String titulo) {
+        return """
+                {"object":"whatsapp_business_account","entry":[{"id":"0","changes":[{"field":"messages","value":{
+                  "messaging_product":"whatsapp",
+                  "metadata":{"display_phone_number":"5500000000000","phone_number_id":"%s"},
+                  "messages":[{"from":"%s","id":"%s","timestamp":"1700000000","type":"interactive",
+                    "interactive":{"type":"button_reply","button_reply":{"id":"%s","title":"%s"}}}]
+                }}]}]}
+                """.formatted(PHONE_NUMBER_ID_FALSO, de, wamid, botaoId, titulo);
+    }
+
+    /** Mensagem de um tipo que o assistente não lê (áudio, imagem, vídeo, figurinha). */
+    static String payloadTipo(String wamid, String de, String tipo) {
+        return """
+                {"object":"whatsapp_business_account","entry":[{"id":"0","changes":[{"field":"messages","value":{
+                  "messaging_product":"whatsapp",
+                  "messages":[{"from":"%s","id":"%s","timestamp":"1700000000","type":"%s","%s":{"id":"midia"}}]
+                }}]}]}
+                """.formatted(de, wamid, tipo, tipo);
     }
 
     /** O processamento é assíncrono: espera o log de conclusão daquele wamid. */

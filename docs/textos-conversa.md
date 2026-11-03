@@ -74,6 +74,12 @@ Notas 4 e 5:
 Que bom saber disso! 🙂 Agradeço a sua resposta.
 ```
 
+Mensagem vazia ou só com espaços (não é gravada como relato):
+
+```text
+Pode me contar com suas palavras o que está acontecendo. Estou por aqui para ouvir.
+```
+
 ## 4. Confirmação do relato (H16)
 
 O `{destinatario}` depende da categoria: "o gerente da sua loja", "o RH" ou "o gerente da sua

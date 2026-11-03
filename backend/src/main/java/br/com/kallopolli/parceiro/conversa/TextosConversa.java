@@ -94,6 +94,12 @@ public final class TextosConversa {
         };
     }
 
+    // 3b. Relato vazio ou só com espaços (H13): não é gravado nem classificado.
+
+    public static String conviteRelato() {
+        return "Pode me contar com suas palavras o que está acontecendo. Estou por aqui para ouvir.";
+    }
+
     // 4. Confirmação do relato (H16)
 
     /**

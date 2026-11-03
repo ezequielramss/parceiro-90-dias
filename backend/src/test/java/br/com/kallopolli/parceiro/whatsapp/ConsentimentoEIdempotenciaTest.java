@@ -64,7 +64,7 @@ class ConsentimentoEIdempotenciaTest extends WebhookTestBase {
                     assertThat(c.colaboradorId()).isEqualTo(colaborador.id());
                 });
         assertThat(repositorios.auditoria()).extracting("acao").containsExactly("CONSENTIMENTO_ACEITO");
-        assertThat(respostasEnviadas()).singleElement().asString().contains("aceite foi registrado");
+        assertThat(respostasEnviadas()).singleElement().asString().contains("Que bom ter você por aqui", "PARAR");
     }
 
     @ParameterizedTest
