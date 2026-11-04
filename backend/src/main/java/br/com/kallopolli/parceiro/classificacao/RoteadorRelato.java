@@ -24,7 +24,7 @@ public class RoteadorRelato {
     public static final String AGREGADO = "AGREGADO";
 
     /** Vão só ao RH (tabela categorias); a guarda abaixo protege contra erro de cadastro. */
-    static final Set<String> RESTRITAS =
+    public static final Set<String> RESTRITAS =
             Set.of("CONFLITO_CHEFIA", "ASSEDIO", "HUMILHACAO", "SITUACAO_GRAVE", "NAO_CLASSIFICADO");
 
     public DecisaoEncaminhamento decidir(Classificacao classificacao, Categoria categoria) {

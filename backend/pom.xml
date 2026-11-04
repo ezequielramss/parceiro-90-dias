@@ -39,6 +39,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
+        <!-- Login do dashboard: confere o JWT do Supabase Auth pelo JWKS do projeto. -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>10.9.1</version>
+        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -65,6 +71,11 @@
                     <include>prompt.md</include>
                     <include>saida.schema.json</include>
                 </includes>
+            </resource>
+            <!-- Fonte única do dashboard: dashboard/ servido pelo próprio backend (mesma origem, sem CORS). -->
+            <resource>
+                <directory>${project.basedir}/../dashboard</directory>
+                <targetPath>static</targetPath>
             </resource>
         </resources>
         <plugins>

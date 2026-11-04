@@ -6,7 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import br.com.kallopolli.parceiro.classificacao.CategoriasEmMemoria;
 import br.com.kallopolli.parceiro.classificacao.ClassificadorFalso;
 import br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria;
-import java.io.IOException;
+import br.com.kallopolli.parceiro.painel.PainelEmMemoria;
+import br.com.kallopolli.parceiro.painel.SupabaseAuthFalso;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 /**
  * Sobe a aplicação com segredos FALSOS (nenhum valor real), repositórios em memória
- * e a Graph API apontando para um servidor local.
+ * e a Graph API e o Supabase Auth apontando para servidores locais.
  */
 @SpringBootTest(properties = {
         "WHATSAPP_TOKEN=" + WebhookTestBase.TOKEN_FALSO,
@@ -45,11 +46,12 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
         "GEMINI_MODEL=modelo-falso",
         "management.health.db.enabled=false",
         "parceiro.checkin.ativo=false",
+        "parceiro.retencao.ativo=false",
         "whatsapp.read-timeout=500ms"
 })
 @AutoConfigureMockMvc
 @Import(WebhookTestBase.Repositorios.class)
-abstract class WebhookTestBase {
+public abstract class WebhookTestBase {
 
     static final String TOKEN_FALSO = "TOKEN-FALSO-DE-TESTE-7f3a9c";
     static final String PHONE_NUMBER_ID_FALSO = "100000000000001";
@@ -59,11 +61,13 @@ abstract class WebhookTestBase {
     static final String CHAVE_GEMINI_FALSA = "CHAVE-GEMINI-FALSA-DE-TESTE-5c1a";
 
     static final GraphApiFalsa GRAPH_API;
+    protected static final SupabaseAuthFalso SUPABASE;
 
     static {
         try {
             GRAPH_API = new GraphApiFalsa();
-        } catch (IOException e) {
+            SUPABASE = new SupabaseAuthFalso();
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }
@@ -87,18 +91,29 @@ abstract class WebhookTestBase {
         ClassificadorFalso classificadorFalso() {
             return new ClassificadorFalso();
         }
+
+        @Bean
+        @Primary
+        PainelEmMemoria painelEmMemoria() {
+            return new PainelEmMemoria();
+        }
     }
 
     @DynamicPropertySource
     static void graphApi(DynamicPropertyRegistry registry) {
         registry.add("whatsapp.base-url", GRAPH_API::url);
+        registry.add("parceiro.dashboard.supabase-url", SUPABASE::url);
+        registry.add("parceiro.dashboard.supabase-publishable-key", () -> SupabaseAuthFalso.CHAVE_PUBLICAVEL_FALSA);
     }
 
     @Autowired
-    MockMvc mvc;
+    protected MockMvc mvc;
 
     @Autowired
-    RepositoriosEmMemoria repositorios;
+    protected RepositoriosEmMemoria repositorios;
+
+    @Autowired
+    protected PainelEmMemoria painel;
 
     @Autowired
     ClassificadorFalso classificador;
@@ -107,6 +122,8 @@ abstract class WebhookTestBase {
     void limparEstado() {
         repositorios.limpar();
         classificador.limpar();
+        painel.limpar();
+        SUPABASE.limpar();
         GRAPH_API.responder(200, GraphApiFalsa.WAMID_GERADO);
         GRAPH_API.reabrirJanelas();
         GRAPH_API.atrasar(0);

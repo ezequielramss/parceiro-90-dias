@@ -1,4 +1,4 @@
-import { h, icon, avatar, badge, formatDate } from "../ui.js";
+import { h, icon, avatar, badge, formatDate, formatPercent } from "../ui.js";
 
 const tones = ["purple", "blue", "orange", "green", "lime"];
 const levelClass = (level) => `level-${level.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`;
@@ -11,7 +11,7 @@ function renderEmployees({ data, query = "", selectedId, onSelect, detailsOpen =
     summaryCard("people", "dark", "Em acompanhamento", data.kpis.emJornada, "nos primeiros 90 dias"),
     summaryCard("warning", "red", "Precisam de atenção", data.kpis.precisamAtencao, "com motivo explicável"),
     summaryCard("inbox", "yellow", "Alertas abertos", data.kpis.alertasAbertos, "aguardando acompanhamento"),
-    summaryCard("check", "green", "Presença média", `${Math.round(colaboradores.reduce((sum, p) => sum + p.presenca, 0) / colaboradores.length)}%`, "entre os exemplos exibidos"));
+    summaryCard("check", "green", "Presença média", averagePresence(colaboradores), colaboradores.some((p) => typeof p.presenca === "number") ? "entre as pessoas exibidas" : "sem dados de ponto nesta versão"));
 
   const toolbar = h("div", { className: "employees-toolbar" },
     h("div", {}, h("h2", {}, "Equipe em acompanhamento"), h("p", { className: "results-count" }, `${matching.length} funcionários encontrados`)),
@@ -35,7 +35,7 @@ function renderEmployees({ data, query = "", selectedId, onSelect, detailsOpen =
     const row = h("button", { type: "button", className: `employee-row ${person.id === selected?.id ? "selected" : ""}`, role: "row", "aria-label": `Ver detalhes de ${person.nome}`, dataset: { level: person.nivelAtencao } },
       h("span", { className: "employee-person", role: "cell" }, avatar(person.iniciais, tones[colaboradores.indexOf(person) % tones.length]), h("span", {}, h("strong", {}, person.nome), h("small", {}, `${person.funcao} · ${person.loja}`))),
       h("span", { className: "employee-tenure", role: "cell" }, icon("calendar", 14), `Dia ${person.diaJornada} de 90`),
-      h("span", { className: "attendance-cell", role: "cell" }, h("strong", {}, `${person.presenca}%`), h("span", { className: "table-progress" }, h("progress", { max: 100, value: person.presenca, "aria-label": `Presença ${person.presenca}%` }))),
+      h("span", { className: "attendance-cell", role: "cell" }, h("strong", {}, formatPercent(person.presenca)), typeof person.presenca === "number" ? h("span", { className: "table-progress" }, h("progress", { max: 100, value: person.presenca, "aria-label": `Presença ${person.presenca}%` })) : null),
       h("span", { role: "cell" }, badge(person.nivelAtencao, `level-badge ${levelClass(person.nivelAtencao)}`)), icon("chevron", 16));
     row.addEventListener("click", () => onSelect(person.id));
     table.append(row);
@@ -52,8 +52,8 @@ function renderEmployees({ data, query = "", selectedId, onSelect, detailsOpen =
     h("div", { className: "detail-cover" }),
     h("button", { type: "button", className: "close-detail", "aria-label": "Fechar detalhes", onClick: onClose }, icon("close", 17)),
     h("div", { className: "detail-profile" }, avatar(selected.iniciais, tones[colaboradores.indexOf(selected) % tones.length]), badge(selected.nivelAtencao, `level-badge ${levelClass(selected.nivelAtencao)}`), h("h2", {}, selected.nome), h("p", {}, `${selected.funcao} · Unidade ${selected.loja}`)),
-    h("div", { className: "journey-block" }, h("div", { className: "journey-copy" }, h("span", {}, "Jornada de 90 dias"), h("strong", {}, `${selected.diaJornada} de 90`)), h("div", { className: "journey-track" }, h("progress", { max: 90, value: selected.diaJornada, "aria-label": `Dia ${selected.diaJornada} de 90` })), h("small", {}, `Próximo check-in: ${new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short" }).format(new Date(`${selected.proximoCheckin}T12:00:00`))}`)),
-    h("div", { className: "detail-stats" }, detailStat("Presença", `${selected.presenca}%`, `${selected.faltas} faltas no período`), detailStat("Último contato", formatDate(selected.ultimoContato), "via WhatsApp")),
+    h("div", { className: "journey-block" }, h("div", { className: "journey-copy" }, h("span", {}, "Jornada de 90 dias"), h("strong", {}, `${selected.diaJornada} de 90`)), h("div", { className: "journey-track" }, h("progress", { max: 90, value: selected.diaJornada, "aria-label": `Dia ${selected.diaJornada} de 90` })), h("small", {}, selected.proximoCheckin ? `Próximo check-in: ${new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short" }).format(new Date(`${selected.proximoCheckin}T12:00:00`))}` : "Sem check-in agendado")),
+    h("div", { className: "detail-stats" }, detailStat("Presença", formatPercent(selected.presenca), typeof selected.faltas === "number" ? `${selected.faltas} faltas no período` : "sem dados de ponto"), detailStat("Último contato", formatDate(selected.ultimoContato), "via WhatsApp")),
     h("div", { className: `detail-alert ${selected.nivelAtencao === "Estável" ? "confidential" : ""}` }, icon("warning", 18), h("div", {}, h("strong", {}, selected.nivelAtencao === "Estável" ? "Acompanhamento" : "Motivo da atenção"), h("p", {}, selected.motivoAtencao))),
     alertSection) : null;
 
@@ -65,6 +65,10 @@ function renderEmployees({ data, query = "", selectedId, onSelect, detailsOpen =
 
 function summaryCard(symbol, tone, label, value, help) {
   return h("article", { className: "summary-card" }, h("div", { className: `summary-icon ${tone}` }, icon(symbol)), h("div", {}, h("span", {}, label), h("strong", {}, value), h("small", {}, help)));
+}
+function averagePresence(people) {
+  const values = people.map((p) => p.presenca).filter((v) => typeof v === "number");
+  return values.length ? `${Math.round(values.reduce((sum, v) => sum + v, 0) / values.length)}%` : "—";
 }
 function detailStat(label, value, hint) { return h("div", {}, h("span", {}, label), h("strong", {}, value), h("small", {}, hint)); }
 

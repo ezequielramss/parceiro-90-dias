@@ -1,4 +1,4 @@
-import { gerarRelatorio } from "../api.js";
+import { gerarRelatorio, RELATORIOS_DISPONIVEIS } from "../api.js";
 import { h, icon } from "../ui.js";
 
 let escopo = "GERAL";
@@ -49,6 +49,7 @@ function statusChart(items) {
 function comparisonChart(items) {
   const width = 330, left = 16, right = 315, top = 20, bottom = 140;
   const presence = items.map((item) => item.presenca);
+  if (presence.some((value) => typeof value !== "number")) return attentionOnlyChart(items);
   const attention = items.map((item) => item.atencao + item.prioridade);
   const presenceMin = Math.min(...presence) - 2, presenceMax = Math.max(...presence) + 2;
   const attentionMin = Math.min(...attention) - 2, attentionMax = Math.max(...attention) + 2;
@@ -58,6 +59,17 @@ function comparisonChart(items) {
   const labels = items.map((item, index) => h("text", { x: left + index * ((right - left) / Math.max(1, items.length - 1)), y: 160, "text-anchor": "middle" }, item.mes));
   const dots = presence.map((value, index) => h("circle", { cx: left + index * ((right - left) / Math.max(1, items.length - 1)), cy: bottom - ((value - presenceMin) / Math.max(1, presenceMax - presenceMin)) * (bottom - top), r: 3, class: "presence-dot" }));
   return h("div", { className: "report-svg-wrap" }, h("svg", { viewBox: `0 0 ${width} 170`, role: "img", "aria-label": "Linhas de presença média e pessoas em atenção por mês" }, h("line", { x1: 8, y1: 140, x2: 322, y2: 140, class: "report-axis" }), h("polyline", { points: presencePoints, class: "presence-line" }), h("polyline", { points: attentionPoints, class: "attention-line-chart" }), ...dots, ...labels), h("small", { className: "chart-note" }, "As séries usam escalas visuais próprias para facilitar a comparação de tendência."));
+}
+
+/** Sem dados de ponto, mostra só a linha de pessoas em atenção. */
+function attentionOnlyChart(items) {
+  const left = 16, right = 315, top = 20, bottom = 140;
+  const attention = items.map((item) => item.atencao + item.prioridade);
+  const min = 0, max = Math.max(1, ...attention);
+  const x = (index) => left + index * ((right - left) / Math.max(1, items.length - 1));
+  const points = attention.map((value, index) => `${x(index)},${bottom - ((value - min) / (max - min)) * (bottom - top)}`).join(" ");
+  const labels = items.map((item, index) => h("text", { x: x(index), y: 160, "text-anchor": "middle" }, item.mes));
+  return h("div", { className: "report-svg-wrap" }, h("svg", { viewBox: "0 0 330 170", role: "img", "aria-label": "Linha de pessoas em atenção por mês" }, h("line", { x1: 8, y1: 140, x2: 322, y2: 140, class: "report-axis" }), h("polyline", { points, class: "attention-line-chart" }), ...labels), h("small", { className: "chart-note" }, "Presença indisponível: o sistema ainda não recebe dados de ponto."));
 }
 
 function reportConfig(colaboradores, onUpdate) {
@@ -74,6 +86,7 @@ function reportConfig(colaboradores, onUpdate) {
     employeeSelect.addEventListener("change", () => { colaboradorId = employeeSelect.value; resultado = null; mensagem = ""; onUpdate(); });
     fields.push(h("label", {}, h("span", {}, "Colaborador"), employeeSelect));
   }
+  if (!RELATORIOS_DISPONIVEIS) return h("div", { className: "ai-config" }, ...fields, h("button", { type: "button", className: "button button-primary generate-report", disabled: true }, icon("sparkles", 16), "Gerar análise"), h("p", { className: "report-error", role: "status" }, "Indisponível nesta versão."));
   const generate = h("button", { type: "button", className: "button button-primary generate-report", disabled: carregando }, carregando ? icon("clock", 16) : icon("sparkles", 16), carregando ? "Gerando análise..." : "Gerar análise");
   generate.addEventListener("click", async () => {
     carregando = true; mensagem = ""; resultado = null; onUpdate();

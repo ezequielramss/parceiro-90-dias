@@ -50,13 +50,20 @@ function formatDuration(alerta) {
   return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}min`;
 }
 
+const CONFIDENTIAL = ["ASSEDIO", "CONFLITO_CHEFIA", "HUMILHACAO", "SITUACAO_GRAVE", "NAO_CLASSIFICADO"];
 function isConfidential(alerta) {
-  return alerta.destino === "RH" && ["ASSEDIO", "CONFLITO_CHEFIA"].includes(alerta.categoria);
+  return CONFIDENTIAL.includes(alerta.categoria);
+}
+function labelDestination(value) {
+  return value === "RH" ? "RH" : value === "GERENTE_E_RH" ? "Gerente e RH" : "Gerente";
+}
+function formatPercent(value) {
+  return typeof value === "number" ? `${value}%` : "—";
 }
 
 function labelCategory(value) {
-  const labels = { CANSACO: "Cansaço", SOBRECARGA: "Sobrecarga", DESMOTIVACAO: "Desmotivação", VONTADE_DE_SAIR: "Vontade de sair", DUVIDA: "Dúvida", CONFLITO_COLEGA: "Conflito com colega", CONFLITO_CHEFIA: "Conflito com chefia", ASSEDIO: "Assédio", SITUACAO_GRAVE: "Situação grave" };
+  const labels = { CANSACO: "Cansaço", SOBRECARGA: "Sobrecarga", DESMOTIVACAO: "Desmotivação", VONTADE_DE_SAIR: "Vontade de sair", DUVIDA: "Dúvida", CONFLITO_COLEGA: "Conflito com colega", CONFLITO_CHEFIA: "Conflito com chefia", ASSEDIO: "Assédio", HUMILHACAO: "Humilhação", SITUACAO_GRAVE: "Situação grave", ELOGIO: "Elogio", NAO_CLASSIFICADO: "Não classificado" };
   return labels[value] || value;
 }
 
-export { h, icon, avatar, badge, formatTime, formatDate, formatDuration, isConfidential, labelCategory };
+export { h, icon, avatar, badge, formatTime, formatDate, formatDuration, formatPercent, isConfidential, labelCategory, labelDestination };
