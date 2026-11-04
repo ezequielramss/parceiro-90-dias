@@ -18,11 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
  * responde 503 com mensagem clara. Segredos falsos.
  */
 @SpringBootTest(properties = {
-        "WHATSAPP_TOKEN=TOKEN-FALSO-SEM-SUPABASE",
-        "WHATSAPP_PHONE_NUMBER_ID=100000000000002",
-        "WHATSAPP_VERIFY_TOKEN=verify-falso-sem-supabase",
-        "WHATSAPP_APP_SECRET=APP-SECRET-FALSO-SEM-SUPABASE",
-        "WHATSAPP_GRAPH_VERSION=v99.0",
+        "parceiro.whatsapp.canal=evolution",
+        "EVOLUTION_API_URL=http://127.0.0.1:1",
+        "EVOLUTION_API_KEY=APIKEY-FALSA-SEM-SUPABASE",
+        "EVOLUTION_INSTANCE=instancia-falsa",
+        "EVOLUTION_WEBHOOK_SECRET=segredo-falso-sem-supabase",
         "DATABASE_URL=jdbc:postgresql://127.0.0.1:1/nao-usado",
         "DATABASE_USER=usuario-falso",
         "DATABASE_PASSWORD=SENHA-FALSA-SEM-SUPABASE",
@@ -54,12 +54,10 @@ class PainelSemSupabaseTest {
         String mensagem = mvc.perform(get("/api/perfil")).andReturn().getResponse().getContentAsString();
         assertThat(mensagem).contains("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY");
 
-        mvc.perform(get("/webhook/whatsapp")
-                        .param("hub.mode", "subscribe")
-                        .param("hub.verify_token", "verify-falso-sem-supabase")
-                        .param("hub.challenge", "123"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("123"));
+        mvc.perform(post("/webhook/evolution").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Webhook-Secret", "segredo-falso-sem-supabase")
+                        .content("{\"event\":\"connection.update\",\"data\":{}}"))
+                .andExpect(status().isOk());
         mvc.perform(get("/index.html")).andExpect(status().isOk());
     }
 }

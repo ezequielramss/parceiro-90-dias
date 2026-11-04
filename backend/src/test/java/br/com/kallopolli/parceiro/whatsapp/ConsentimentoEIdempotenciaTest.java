@@ -32,9 +32,9 @@ class ConsentimentoEIdempotenciaTest extends WebhookTestBase {
         repositorios.cadastrar("+" + NUMERO);
         String corpo = payloadTexto("wamid.REPETIDA", NUMERO, "oi");
 
-        mvc.perform(postAssinado(corpo)).andExpect(status().isOk());
+        mvc.perform(postWebhook(corpo)).andExpect(status().isOk());
         esperarProcessamento(saida, "wamid.REPETIDA");
-        mvc.perform(postAssinado(corpo)).andExpect(status().isOk());
+        mvc.perform(postWebhook(corpo)).andExpect(status().isOk());
         esperarLog(saida, "REPETIDA_IGNORADA");
 
         assertThat(repositorios.mensagens()).filteredOn(m -> m.direcao().equals("ENTRADA")).hasSize(1);
@@ -68,11 +68,11 @@ class ConsentimentoEIdempotenciaTest extends WebhookTestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"parar", "PARAR", "Parar", "Parar!", "  parar  ", "Párar", "PÁRAR.", "parar\\n", "pArAr..."})
+    @ValueSource(strings = {"parar", "PARAR", "Parar", "Parar!", "  parar  ", "Párar", "PÁRAR.", "parar\n", "pArAr..."})
     void pararComVariacoesRetiraOAceiteEConfirma(String texto, CapturedOutput saida) throws Exception {
         repositorios.cadastrar("+" + NUMERO);
         enviar(saida, "aceito");
-        GRAPH_API.recebidas().clear();
+        EVOLUTION.recebidas().clear();
 
         enviar(saida, texto);
 
@@ -108,7 +108,7 @@ class ConsentimentoEIdempotenciaTest extends WebhookTestBase {
     void remetenteNaoCadastradoNaoRecebeNadaNemEGravado(CapturedOutput saida) throws Exception {
         enviar(saida, "oi");
 
-        assertThat(GRAPH_API.recebidas().poll(200, TimeUnit.MILLISECONDS)).isNull();
+        assertThat(EVOLUTION.recebidas().poll(200, TimeUnit.MILLISECONDS)).isNull();
         assertThat(repositorios.mensagens()).isEmpty();
         assertThat(saida.getAll()).contains("REMETENTE_NAO_CADASTRADO");
     }
@@ -118,37 +118,37 @@ class ConsentimentoEIdempotenciaTest extends WebhookTestBase {
         Colaborador colaborador = repositorios.cadastrar("+" + NUMERO);
 
         assertThat(envioAcompanhamento.enviar(colaborador, "Como foi seu dia?")).isFalse();
-        assertThat(GRAPH_API.recebidas().poll(200, TimeUnit.MILLISECONDS)).isNull();
+        assertThat(EVOLUTION.recebidas().poll(200, TimeUnit.MILLISECONDS)).isNull();
 
         enviar(saida, "aceito");
-        GRAPH_API.recebidas().clear();
+        EVOLUTION.recebidas().clear();
 
         assertThat(envioAcompanhamento.enviar(colaborador, "Como foi seu dia?")).isTrue();
         assertThat(respostasEnviadas()).singleElement().asString().contains("Como foi seu dia?");
     }
 
     @Test
-    void mensagensDeSaidaFicamRegistradasComOWamidDaMeta(CapturedOutput saida) throws Exception {
+    void mensagensDeSaidaFicamRegistradasComOIdDaEvolution(CapturedOutput saida) throws Exception {
         repositorios.cadastrar("+" + NUMERO);
-        GRAPH_API.responder(200, "{\"messages\":[{\"id\":\"wamid.SAIDA-1\"}]}");
+        EVOLUTION.responder(200, "{\"key\":{\"id\":\"EVO-SAIDA-1\",\"fromMe\":true},\"status\":\"PENDING\"}");
 
         enviar(saida, "oi");
 
         assertThat(repositorios.mensagens()).filteredOn(m -> m.direcao().equals("SAIDA"))
-                .singleElement().extracting("wamid").isEqualTo("wamid.SAIDA-1");
+                .singleElement().extracting("wamid").isEqualTo("EVO-SAIDA-1");
     }
 
     private void enviar(CapturedOutput saida, String texto) throws Exception {
         String wamid = "wamid.CONS-" + (++sequencia) + "-" + System.nanoTime();
-        mvc.perform(postAssinado(payloadTexto(wamid, NUMERO, texto))).andExpect(status().isOk());
+        mvc.perform(postWebhook(payloadTexto(wamid, NUMERO, texto))).andExpect(status().isOk());
         esperarProcessamento(saida, wamid);
     }
 
-    /** Corpos das mensagens que chegaram à Graph API falsa. */
+    /** Corpos das mensagens que chegaram à Evolution falsa. */
     private List<String> respostasEnviadas() {
-        List<GraphApiFalsa.Requisicao> recebidas = new ArrayList<>();
-        GRAPH_API.recebidas().drainTo(recebidas);
-        return recebidas.stream().map(GraphApiFalsa.Requisicao::corpo).toList();
+        List<EvolutionFalsa.Requisicao> recebidas = new ArrayList<>();
+        EVOLUTION.recebidas().drainTo(recebidas);
+        return recebidas.stream().map(EvolutionFalsa.Requisicao::corpo).toList();
     }
 
     private static void esperarLog(CapturedOutput saida, String trecho) throws InterruptedException {

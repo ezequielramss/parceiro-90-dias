@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.kallopolli.parceiro.alerta.Responsavel;
 import br.com.kallopolli.parceiro.consentimento.EnvioAcompanhamento;
 import br.com.kallopolli.parceiro.conversa.AgendadorCheckin;
+import br.com.kallopolli.parceiro.conversa.TextosConversa;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,10 +35,16 @@ abstract class FluxoTestBase extends WebhookTestBase {
     @Autowired
     EnvioAcompanhamento envioAcompanhamento;
 
-    /** Uma mensagem enviada à Graph API falsa, já lida. */
-    record Enviada(String para, String texto, List<String> botoes) {
-        boolean interativa() {
-            return !botoes.isEmpty();
+    /** Uma mensagem enviada à Evolution falsa, já lida. */
+    record Enviada(String para, String texto) {
+        /** A confirmação do relato: termina com as opções SIM e NÃO. */
+        boolean pedeConfirmacao() {
+            return texto.endsWith(TextosConversa.OPCOES_CONFIRMACAO);
+        }
+
+        /** Alerta a gerente ou RH: termina com as opções CONVERSEI e NÃO CONSEGUI. */
+        boolean alerta() {
+            return texto.endsWith(TextosConversa.OPCOES_ALERTA);
         }
     }
 
@@ -66,31 +73,20 @@ abstract class FluxoTestBase extends WebhookTestBase {
         return wamid;
     }
 
-    String tocar(CapturedOutput saida, String de, String botaoId) throws Exception {
-        String wamid = "wamid.BTN-" + SEQUENCIA.incrementAndGet();
-        postar(saida, wamid, payloadBotao(wamid, de, botaoId, "titulo"));
-        return wamid;
-    }
 
     void postar(CapturedOutput saida, String wamid, String corpo) throws Exception {
-        mvc.perform(postAssinado(corpo)).andExpect(status().isOk());
+        mvc.perform(postWebhook(corpo)).andExpect(status().isOk());
         esperarProcessamento(saida, wamid);
     }
 
-    /** Lê e esvazia o que foi enviado à Graph API falsa. */
+    /** Lê e esvazia o que foi enviado à Evolution falsa ({"number","text"}). */
     List<Enviada> enviadas() throws Exception {
-        List<GraphApiFalsa.Requisicao> brutas = new ArrayList<>();
-        GRAPH_API.recebidas().drainTo(brutas);
+        List<EvolutionFalsa.Requisicao> brutas = new ArrayList<>();
+        EVOLUTION.recebidas().drainTo(brutas);
         List<Enviada> lidas = new ArrayList<>();
         for (var r : brutas) {
             JsonNode corpo = JSON.readTree(r.corpo());
-            List<String> botoes = new ArrayList<>();
-            corpo.path("interactive").path("action").path("buttons")
-                    .forEach(b -> botoes.add(b.path("reply").path("id").asText()));
-            String texto = corpo.path("type").asText().equals("interactive")
-                    ? corpo.path("interactive").path("body").path("text").asText()
-                    : corpo.path("text").path("body").asText();
-            lidas.add(new Enviada(corpo.path("to").asText(), texto, botoes));
+            lidas.add(new Enviada(corpo.path("number").asText(), corpo.path("text").asText()));
         }
         return lidas;
     }
