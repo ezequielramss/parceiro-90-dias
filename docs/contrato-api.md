@@ -48,7 +48,7 @@ O papel e a loja vêm sempre de `public.acessos_dashboard`. O que o navegador en
 
 - Alertas: só os de categorias com destino `GERENTE` ou `GERENTE_E_RH`, nunca os urgentes.
 - Nunca recebe motivo, texto do relato nem as categorias restritas (`CONFLITO_CHEFIA`, `NAO_CLASSIFICADO`, `ASSEDIO`, `HUMILHACAO`, `SITUACAO_GRAVE`).
-- Como no alerta do WhatsApp (H17), o alerta não é ligado à pessoa: `colaboradorId` vem `null` e a linha do tempo mostra só os check-ins.
+- Como no alerta enviado por WhatsApp (H17), o alerta não é ligado à pessoa: `colaboradorId` vem `null` e a linha do tempo mostra só os check-ins.
 - KPIs e bem-estar são só da loja dele.
 - `/api/relatos` responde 403.
 
@@ -181,3 +181,15 @@ A resposta contém `resumoExecutivo`, `pontosAtencao[]` e `sugestoes[]`.
 ```
 
 No protótipo, `USE_MOCK` retorna `relatorio-exemplo.json` após atraso simulado de aproximadamente 800 ms. A integração futura deve omitir nomes quando `publico` for `DIRECAO`, aplicar autorização no servidor e sinalizar que a análise precisa de revisão humana.
+
+## Fora do `/api`: canal do WhatsApp
+
+Não fazem parte do contrato do dashboard e não usam o login do painel.
+
+- `POST /webhook/evolution` (só com o canal `evolution`): evento `messages.upsert` da Evolution API. Exige o cabeçalho `X-Webhook-Secret`; sem ele ou com valor errado, `401` sem processar. Com o segredo certo, sempre `200`.
+- `/simulador` e `/simulador/api/**` (só com o canal `simulador`; fora disso, `404`): página e API do simulador local. Só atendem a própria máquina (loopback, `Host` `localhost` ou `127.0.0.1`, sem cabeçalho de proxy); o resto recebe `403`.
+  - `GET /simulador/api/contatos`: `[{"telefone":"5511999990000","nome":"...","papeis":["Colaborador","RH"]}]`.
+  - `POST /simulador/api/mensagens` com `{"telefone":"5511999990000","texto":"oi"}`: `202` com `{"id":"sim-..."}`.
+  - `GET /simulador/api/mensagens?telefone=&depois=<seq>`: `{"ultima":12,"mensagens":[{"seq":12,"numero":"...","texto":"...","opcoes":["SIM","NÃO"],"enviadaEm":"..."}]}`.
+
+O antigo `/webhook/whatsapp` (Meta) não existe mais.

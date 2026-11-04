@@ -15,7 +15,9 @@ O próprio backend serve o dashboard, na mesma origem que a API e sem CORS: suba
 - `dashboard/css/`: reset e estilos da interface.
 - `dashboard/js/`: inicialização, API, utilitários seguros e telas.
 - `dashboard/mock/`: dados demonstrativos fictícios.
-- `backend/`: API (WhatsApp e painel) e servidor do dashboard.
+- `backend/`: API (WhatsApp e painel), servidor do dashboard e do simulador local.
+- `evolution/`: Evolution API local (Docker) para a demonstração no celular.
+- `simulador/`: página do simulador de chat, servida pelo backend só com o canal simulador.
 - `docs/`: contrato da API e decisões de produto e privacidade.
 
 ## Convenções
@@ -42,3 +44,9 @@ Visão geral, Funcionários, Alertas, Relatos confidenciais, Bem-estar e Relató
 - As mudanças de status e as observações dos relatos ficam só no navegador.
 - A geração de análise em Relatórios mostra "Indisponível nesta versão." no modo real. No modo demonstração, ela usa um mock com atraso simulado.
 - Presença e faltas aparecem como "—", porque o sistema não recebe dados de ponto.
+
+## WhatsApp
+
+Neste MVP o WhatsApp funciona pela **Evolution API** (`evolution/README.md`), que conecta um número por QR code. Para testar sem nada externo, há um **simulador de chat** local em `http://localhost:8080/simulador` (`WHATSAPP_CANAL=simulador`). Os dois usam o mesmo fluxo; as opções vão escritas nas mensagens (SIM ou NÃO, CONVERSEI ou NÃO CONSEGUI), sem botões e sem janela de 24 horas.
+
+> **Produção deve voltar à API oficial da Meta.** A conexão por QR code é não oficial e o número pode ser banido. A versão com a WhatsApp Cloud API está na tag git `meta-cloud-api`.
