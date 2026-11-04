@@ -1,5 +1,6 @@
 package br.com.kallopolli.parceiro.alerta;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +19,12 @@ public interface AlertaEntregaRepository {
     void marcarFalha(long entregaId);
 
     Optional<Entrega> buscarEntrega(long entregaId);
+
+    /**
+     * A entrega mais recente ainda aberta (enviada, sem falha e sem CONVERSEI) de qualquer um dos
+     * responsáveis. É a que recebe a resposta CONVERSEI ou NÃO CONSEGUI digitada.
+     */
+    Optional<Long> maisRecenteAberta(List<UUID> responsavelIds);
 
     /** Grava CONVERSEI ou NAO_CONSEGUI com respondido_em. */
     void responder(long entregaId, String resposta);

@@ -16,4 +16,7 @@ public interface ResponsavelRepository {
     List<Responsavel> ativosPorTelefones(List<String> telefonesE164);
 
     Optional<Responsavel> buscarResponsavel(UUID id);
+
+    /** Todos os responsáveis ativos (lista de contatos do simulador local). */
+    List<Responsavel> responsaveisAtivos();
 }

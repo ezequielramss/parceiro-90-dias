@@ -56,6 +56,13 @@ public class JdbcRepositorios
     }
 
     @Override
+    public List<Colaborador> colaboradoresAtivos() {
+        return jdbc.sql("select " + COLUNAS_COLABORADOR + " from public.colaboradores c where c.ativo order by c.nome, c.id")
+                .query(COLABORADOR)
+                .list();
+    }
+
+    @Override
     public boolean temAtivo(UUID colaboradorId) {
         return jdbc.sql("""
                         select exists (select 1 from public.consentimentos

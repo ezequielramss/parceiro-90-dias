@@ -9,10 +9,9 @@ import br.com.kallopolli.parceiro.classificacao.RoteadorRelato;
 import br.com.kallopolli.parceiro.consentimento.TextoNormalizado;
 import br.com.kallopolli.parceiro.jornada.AuditoriaRepository;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
-import br.com.kallopolli.parceiro.whatsapp.Botao;
 import br.com.kallopolli.parceiro.whatsapp.MensageiroWhatsApp;
 import br.com.kallopolli.parceiro.whatsapp.MensagemRecebida;
-import java.util.List;
+import br.com.kallopolli.parceiro.whatsapp.RespostaPorTexto;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,8 @@ import org.springframework.stereotype.Service;
  *   <li>AGUARDANDO_HUMOR: "2" ou "nota 2" grava o humor e responde; outro texto vira relato;
  *   <li>LIVRE: texto vira relato, classificado e roteado; o comum espera confirmação, o urgente
  *       (inclui sinais graves) e a falha da IA vão ao RH na hora, o elogio só é agradecido;
- *   <li>AGUARDANDO_CONFIRMACAO_RELATO: "sim" envia, "não" descarta, outro texto reclassifica;
+ *   <li>AGUARDANDO_CONFIRMACAO_RELATO: SIM envia, NÃO descarta, outro texto reclassifica (as
+ *       opções vão escritas na mensagem; não há botões);
  *   <li>tipo não suportado recebe o texto próprio, sem mudar o estado.
  * </ul>
  * Nada sai para gerente ou RH antes do "sim", exceto urgente e falha da IA.
@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 public class OrquestradorConversa {
 
     private static final Pattern NOTA = Pattern.compile("(?:nota )?([1-5])");
-    private static final Pattern BOTAO_CONFIRMACAO = Pattern.compile("conf:(\\d+):(sim|nao)");
 
     private final ConversaEstadoRepository estados;
     private final CheckinRepository checkins;
@@ -73,9 +72,7 @@ public class OrquestradorConversa {
         return switch (estado.tipo()) {
             case AGUARDANDO_CONFIRMACAO_RELATO -> confirmacao(colaborador, mensagem, estado.relatoId());
             case AGUARDANDO_HUMOR -> humor(colaborador, mensagem, estado.checkinId(), mensagemId);
-            case LIVRE -> mensagem.tocouBotao()
-                    ? "BOTAO_SEM_EFEITO"
-                    : novoRelato(colaborador, mensagem.conteudo(), mensagemId);
+            case LIVRE -> novoRelato(colaborador, mensagem.conteudo(), mensagemId);
         };
     }
 
@@ -89,7 +86,7 @@ public class OrquestradorConversa {
 
     private String humor(Colaborador colaborador, MensagemRecebida mensagem, long checkinId, long mensagemId) {
         Matcher nota = NOTA.matcher(TextoNormalizado.normalizar(mensagem.conteudo()));
-        if (!mensagem.tocouBotao() && nota.matches()) {
+        if (nota.matches()) {
             int valor = Integer.parseInt(nota.group(1));
             checkins.registrarHumor(checkinId, valor);
             estados.definir(colaborador.id(), EstadoConversa.LIVRE);
@@ -98,7 +95,7 @@ public class OrquestradorConversa {
         }
         // Sem nota: a pessoa escolheu falar. O check-in fica sem resposta.
         estados.definir(colaborador.id(), EstadoConversa.LIVRE);
-        return mensagem.tocouBotao() ? "BOTAO_SEM_EFEITO" : novoRelato(colaborador, mensagem.conteudo(), mensagemId);
+        return novoRelato(colaborador, mensagem.conteudo(), mensagemId);
     }
 
     private String novoRelato(Colaborador colaborador, String texto, long mensagemId) {
@@ -111,18 +108,12 @@ public class OrquestradorConversa {
     }
 
     private String confirmacao(Colaborador colaborador, MensagemRecebida mensagem, long relatoId) {
-        String resposta;
-        if (mensagem.tocouBotao()) {
-            Matcher botao = BOTAO_CONFIRMACAO.matcher(mensagem.botaoId());
-            if (!botao.matches() || Long.parseLong(botao.group(1)) != relatoId) {
-                return "BOTAO_SEM_EFEITO";
-            }
-            resposta = botao.group(2);
-        } else {
-            resposta = TextoNormalizado.normalizar(mensagem.conteudo());
-        }
+        // Ação interna conf:<relatoId>:sim|nao, a mesma dos antigos botões; vale só para o relato que aguarda.
+        String acao = RespostaPorTexto.confirmacao(mensagem.conteudo())
+                .map(r -> RespostaPorTexto.acaoConfirmacao(relatoId, r))
+                .orElse("");
 
-        if ("sim".equals(resposta)) {
+        if (acao.endsWith(":sim")) {
             var relato = relatos.buscarRelato(relatoId).orElseThrow();
             Classificacao classificacao = relato.classificacao();
             DecisaoEncaminhamento decisao = decidir(classificacao);
@@ -131,7 +122,7 @@ public class OrquestradorConversa {
             mensageiro.enviar(colaborador, TextosConversa.relatoEncaminhado());
             return "ENCAMINHADO";
         }
-        if ("nao".equals(resposta)) {
+        if (acao.endsWith(":nao")) {
             relatos.definirConfirmacao(relatoId, RelatoRepository.DESCARTADO);
             estados.definir(colaborador.id(), EstadoConversa.LIVRE);
             auditoria.registrar(quem(colaborador), "RELATO_DESCARTADO", "relato/" + relatoId);
@@ -171,10 +162,7 @@ public class OrquestradorConversa {
             return "URGENTE";
         }
         estados.definir(colaborador.id(), EstadoConversa.aguardandoConfirmacao(relatoId));
-        mensageiro.enviarBotoes(colaborador,
-                TextosConversa.confirmacaoRelato(classificacao.motivo(), decisao.destino()),
-                List.of(new Botao("conf:" + relatoId + ":sim", TextosConversa.BOTAO_ENVIAR),
-                        new Botao("conf:" + relatoId + ":nao", TextosConversa.BOTAO_NAO_ENVIAR)));
+        mensageiro.enviar(colaborador, TextosConversa.confirmacaoRelato(classificacao.motivo(), decisao.destino()));
         return "AGUARDANDO_CONFIRMACAO";
     }
 

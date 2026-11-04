@@ -6,9 +6,8 @@ import br.com.kallopolli.parceiro.classificacao.RoteadorRelato;
 import br.com.kallopolli.parceiro.conversa.TextosConversa;
 import br.com.kallopolli.parceiro.jornada.AuditoriaRepository;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
-import br.com.kallopolli.parceiro.whatsapp.Botao;
-import br.com.kallopolli.parceiro.whatsapp.WhatsAppClient;
-import br.com.kallopolli.parceiro.whatsapp.WhatsAppClientException;
+import br.com.kallopolli.parceiro.whatsapp.CanalSaida;
+import br.com.kallopolli.parceiro.whatsapp.FalhaEnvio;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Cria o alerta de um relato e envia aos responsáveis (H17, H19), com os botões
- * "Conversei" e "Não consegui". O gerente nunca recebe nome, motivo nem texto do relato; o RH
+ * CONVERSEI e NÃO CONSEGUI por texto. O gerente nunca recebe nome, motivo nem texto do relato; o RH
  * recebe o motivo, nunca o nome nem o texto. Tudo vai para a auditoria (H39), sem texto de relato.
  */
 @Service
@@ -30,15 +29,15 @@ public class ServicoAlertas {
     private final AlertaEntregaRepository entregas;
     private final ResponsavelRepository responsaveis;
     private final AuditoriaRepository auditoria;
-    private final WhatsAppClient client;
+    private final CanalSaida canal;
 
     public ServicoAlertas(AlertaRepository alertas, AlertaEntregaRepository entregas,
-                          ResponsavelRepository responsaveis, AuditoriaRepository auditoria, WhatsAppClient client) {
+                          ResponsavelRepository responsaveis, AuditoriaRepository auditoria, CanalSaida canal) {
         this.alertas = alertas;
         this.entregas = entregas;
         this.responsaveis = responsaveis;
         this.auditoria = auditoria;
-        this.client = client;
+        this.canal = canal;
     }
 
     /** Devolve o id do alerta criado. */
@@ -90,21 +89,17 @@ public class ServicoAlertas {
 
     private void enviar(Responsavel responsavel, long alertaId, String corpo) {
         long entregaId = entregas.criar(alertaId, responsavel.id());
-        List<Botao> botoes = List.of(
-                new Botao("alerta:" + entregaId + ":ok", TextosConversa.BOTAO_CONVERSEI),
-                new Botao("alerta:" + entregaId + ":nao", TextosConversa.BOTAO_NAO_CONSEGUI));
         try {
-            String wamid = client.enviarBotoes(responsavel.numeroWhatsApp(), corpo, botoes);
+            String wamid = canal.enviarTexto(responsavel.numeroWhatsApp(), corpo);
             entregas.registrarEnvio(entregaId, wamid);
             auditoria.registrar(SISTEMA, "ALERTA_ENVIADO", "entrega/" + entregaId);
-        } catch (WhatsAppClientException e) {
-            // Ex.: janela de 24 horas fechada para o responsável. Lembrete e escalonamento: Etapa 3.
+        } catch (FalhaEnvio e) {
+            // Ex.: Evolution fora do ar ou número recusado. Lembrete e escalonamento: Etapa 3.
             entregas.marcarFalha(entregaId);
             auditoria.registrar(SISTEMA, "ALERTA_FALHA_ENVIO", "entrega/" + entregaId);
             log.atWarn().setMessage("falha ao enviar alerta")
                     .addKeyValue("entrega_id", entregaId)
                     .addKeyValue("status_http", e.status())
-                    .addKeyValue("codigo_meta", e.codigoMeta())
                     .log();
         }
     }

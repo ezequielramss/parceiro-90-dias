@@ -57,6 +57,13 @@ public class JdbcAlertaRepositorios implements ResponsavelRepository, AlertaRepo
     }
 
     @Override
+    public List<Responsavel> responsaveisAtivos() {
+        return jdbc.sql("select " + COLUNAS + " from public.responsaveis where ativo order by papel, nome, id")
+                .query(RESPONSAVEL)
+                .list();
+    }
+
+    @Override
     public Optional<Responsavel> buscarResponsavel(UUID id) {
         return jdbc.sql("select " + COLUNAS + " from public.responsaveis where id = :id")
                 .param("id", id)
@@ -118,6 +125,22 @@ public class JdbcAlertaRepositorios implements ResponsavelRepository, AlertaRepo
                 .query((rs, n) -> new Entrega(rs.getLong("id"), rs.getLong("alerta_id"),
                         rs.getObject("responsavel_id", UUID.class), rs.getBoolean("falha_envio"),
                         rs.getString("resposta")))
+                .optional();
+    }
+
+    @Override
+    public Optional<Long> maisRecenteAberta(List<UUID> responsavelIds) {
+        if (responsavelIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return jdbc.sql("""
+                        select id from public.alerta_entregas
+                        where responsavel_id in (:ids) and not falha_envio
+                          and resposta is distinct from 'CONVERSEI'
+                        order by enviado_em desc, id desc
+                        limit 1""")
+                .param("ids", responsavelIds)
+                .query(Long.class)
                 .optional();
     }
 

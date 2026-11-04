@@ -16,10 +16,11 @@ O termo de aceite v1 não está aqui: ele continua em `consentimento/Textos.java
 - nada de diagnóstico, termos clínicos, pontuação ou linguagem de vigilância;
 - sobre privacidade, sempre "confidencial, não anônimo"; nunca "100%".
 
-**Limites do WhatsApp:**
-- texto: até 1000 caracteres;
-- corpo de mensagem com botões: até 1024;
-- rótulo de botão: até 20.
+**Limites e opções:**
+- texto: até 1000 caracteres (os que têm campos variáveis ficam em até 1024 mesmo com entradas enormes);
+- não há botões: o canal (Evolution API ou simulador local) só envia texto. As opções vão escritas no fim da mensagem, e a pessoa responde digitando. Maiúsculas, acentos e pontuação não importam;
+- números não são opção: 1 a 5 é a nota do check-in;
+- neste canal não há janela de 24 horas nem modelos de mensagem.
 
 Os campos entre chaves (`{loja}`, `{motivo}` etc.) são preenchidos pelo sistema. Valores longos
 são cortados com "…" para caber no limite.
@@ -91,9 +92,11 @@ Entendi assim: {motivo}
 Posso encaminhar para {destinatario}? Este canal é confidencial, não anônimo.
 
 Se eu entendi errado, é só escrever de novo do seu jeito.
+
+Responda SIM para enviar ou NÃO para descartar.
 ```
 
-Botões: **Sim, pode enviar** e **Não enviar**.
+Respostas: **SIM** encaminha e **NÃO** descarta. Só valem enquanto a conversa aguarda esta confirmação; fora disso, "sim" e "não" seguem o fluxo normal. **NÃO CONSEGUI** não conta como NÃO. Qualquer outro texto substitui o relato e é classificado de novo.
 
 ## 5. Depois da confirmação
 
@@ -149,15 +152,15 @@ Turno: {turno}
 Assunto: {rótulo da categoria}
 Sugestão: {acaoSugerida}
 
-Este alerta é confidencial. Depois do acompanhamento, toque em uma das opções abaixo.
+Este alerta é confidencial. Depois do acompanhamento, responda CONVERSEI ou NÃO CONSEGUI.
 ```
 
-Botões: **Conversei** e **Não consegui**.
+Respostas: **CONVERSEI** ou **NÃO CONSEGUI**, digitadas. Valem para o alerta mais recente ainda aberto daquele número; sem alerta aberto, o texto segue o fluxo normal. NÃO CONSEGUI é conferido antes de NÃO.
 
 ## 11. Alertas ao RH
 
-O alerta ao RH leva o motivo e **nunca** leva o nome nem o texto do relato. Os botões são os
-mesmos do item 10: **Conversei** e **Não consegui**.
+O alerta ao RH leva o motivo e **nunca** leva o nome nem o texto do relato. As respostas são as
+mesmas do item 10: **CONVERSEI** ou **NÃO CONSEGUI**.
 
 Normal:
 
@@ -172,7 +175,7 @@ Sugestão: {acaoSugerida}
 
 Atenção: loja e turno podem permitir identificar a pessoa. Trate com confidencialidade.
 
-Depois do contato, toque em uma das opções abaixo.
+Depois do contato, responda CONVERSEI ou NÃO CONSEGUI.
 ```
 
 Urgente: o mesmo corpo, com outro título.
@@ -188,7 +191,7 @@ Sugestão: {acaoSugerida}
 
 Atenção: loja e turno podem permitir identificar a pessoa. Trate com confidencialidade.
 
-Depois do contato, toque em uma das opções abaixo.
+Depois do contato, responda CONVERSEI ou NÃO CONSEGUI.
 ```
 
 Sem classificação (a IA falhou):
@@ -203,10 +206,10 @@ A análise automática não funcionou para este relato. Ele está registrado no 
 
 Atenção: loja e turno podem permitir identificar a pessoa. Trate com confidencialidade.
 
-Depois do contato, toque em uma das opções abaixo.
+Depois do contato, responda CONVERSEI ou NÃO CONSEGUI.
 ```
 
-## 12. Resposta ao responsável depois do toque
+## 12. Resposta ao responsável depois de CONVERSEI ou NÃO CONSEGUI
 
 Conversei ("contato realizado" não é "resolvido"):
 
@@ -217,13 +220,13 @@ Registrado: contato realizado. O caso segue em acompanhamento até o RH ou o ges
 Não consegui:
 
 ```text
-Registrado. O alerta continua pendente. Quando conseguir conversar, toque em Conversei.
+Registrado. O alerta continua pendente. Quando conseguir conversar, responda CONVERSEI.
 ```
 
 ## 13. Responsável que escreve fora de um alerta
 
 ```text
-Oi! Por aqui eu envio os alertas de acompanhamento quando houver algum. Quando chegar um, é só usar os botões da mensagem.
+Oi! Por aqui eu envio os alertas de acompanhamento quando houver algum. Quando chegar um, é só responder CONVERSEI ou NÃO CONSEGUI.
 ```
 
 ## 14. Rótulos das categorias
@@ -246,3 +249,16 @@ Usados no campo "Assunto" dos alertas.
 | NAO_CLASSIFICADO | Assunto não classificado |
 
 Um código desconhecido aparece como "Assunto não identificado".
+
+## O que mudou em relação à versão com botões (Java D)
+
+A WhatsApp Cloud API da Meta saiu do MVP (a versão com botões está na tag `meta-cloud-api`). O resto dos textos aprovados não mudou.
+
+| Texto | Antes (botões da Meta) | Agora (texto) |
+|---|---|---|
+| 4. Confirmação do relato | Botões **Sim, pode enviar** e **Não enviar** | Linha "Responda SIM para enviar ou NÃO para descartar." no fim |
+| 10 e 11. Alertas | "...toque em uma das opções abaixo." + botões **Conversei** e **Não consegui** | "...responda CONVERSEI ou NÃO CONSEGUI." |
+| 12. Não consegui | "...toque em Conversei." | "...responda CONVERSEI." |
+| 13. Responsável fora de alerta | "...é só usar os botões da mensagem." | "...é só responder CONVERSEI ou NÃO CONSEGUI." |
+
+Internamente, as respostas digitadas viram as mesmas ações de antes (`conf:<relatoId>:sim|nao` e `alerta:<entregaId>:ok|nao`), e a auditoria mantém os nomes `TOQUE_CONVERSEI` e `TOQUE_NAO_CONSEGUI`.

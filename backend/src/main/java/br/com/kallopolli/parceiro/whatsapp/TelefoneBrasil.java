@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A Meta pode entregar celulares brasileiros sem o nono dígito (55 + DDD + 8 dígitos).
+ * O WhatsApp pode entregar celulares brasileiros sem o nono dígito (55 + DDD + 8 dígitos).
  * Gera as formas E.164 a comparar com o cadastro: com e sem o 9 depois do DDD.
  */
 public final class TelefoneBrasil {
@@ -28,8 +28,8 @@ public final class TelefoneBrasil {
         return candidatos;
     }
 
-    /** O número cadastrado (E.164) corresponde ao remetente da Meta, com ou sem o 9? */
-    public static boolean mesmoNumero(String cadastradoE164, String digitosMeta) {
-        return cadastradoE164 != null && candidatosE164(digitosMeta).contains(cadastradoE164);
+    /** O número cadastrado (E.164) corresponde ao remetente (só dígitos), com ou sem o 9? */
+    public static boolean mesmoNumero(String cadastradoE164, String digitosRemetente) {
+        return cadastradoE164 != null && candidatosE164(digitosRemetente).contains(cadastradoE164);
     }
 }
