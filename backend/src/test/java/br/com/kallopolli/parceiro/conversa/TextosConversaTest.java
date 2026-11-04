@@ -68,8 +68,8 @@ class TextosConversaTest {
         return textos;
     }
 
-    /** Textos que vão com botões: corpo até 1024. Usa entradas enormes para provar o corte. */
-    static List<String> corposComBotao() {
+    /** Textos com campos variáveis: até 1024 mesmo com entradas enormes, para provar o corte. */
+    static List<String> corposLongos() {
         return List.of(
                 TextosConversa.confirmacaoRelato(LONGO, "GERENTE_E_RH"),
                 TextosConversa.alertaGerente(LONGO, LONGO, "ASSEDIO", LONGO),
@@ -85,17 +85,29 @@ class TextosConversaTest {
     }
 
     @ParameterizedTest
-    @MethodSource("corposComBotao")
-    void corpoComBotaoCabeEm1024MesmoComEntradaEnorme(String corpo) {
+    @MethodSource("corposLongos")
+    void corpoCabeEm1024MesmoComEntradaEnorme(String corpo) {
         assertThat(corpo.length()).isLessThanOrEqualTo(1024);
     }
 
     @Test
-    void rotulosDeBotaoTemAte20Caracteres() {
-        assertThat(List.of(TextosConversa.BOTAO_ENVIAR, TextosConversa.BOTAO_NAO_ENVIAR,
-                TextosConversa.BOTAO_CONVERSEI, TextosConversa.BOTAO_NAO_CONSEGUI))
-                .containsExactly("Sim, pode enviar", "Não enviar", "Conversei", "Não consegui")
-                .allSatisfy(b -> assertThat(b.length()).isLessThanOrEqualTo(20));
+    void opcoesVaoEscritasNoTextoSemBotoes() {
+        assertThat(TextosConversa.confirmacaoRelato(MOTIVO, "GERENTE"))
+                .endsWith("Responda SIM para enviar ou NÃO para descartar.");
+        assertThat(List.of(
+                TextosConversa.alertaGerente("Loja Teste", "Noite", "CANSACO", ACAO),
+                TextosConversa.alertaRh("Loja Teste", "Noite", "CANSACO", MOTIVO, ACAO),
+                TextosConversa.alertaRhUrgente("Loja Teste", "Noite", "ASSEDIO", MOTIVO, ACAO),
+                TextosConversa.alertaRhSemClassificacao("Loja Teste", "Noite")))
+                .allSatisfy(t -> assertThat(t).endsWith("responda CONVERSEI ou NÃO CONSEGUI."));
+        assertThat(TextosConversa.respostaNaoConsegui()).contains("responda CONVERSEI");
+        assertThat(TextosConversa.responsavelForaDeAlerta()).contains("responder CONVERSEI ou NÃO CONSEGUI");
+    }
+
+    @ParameterizedTest
+    @MethodSource("todosOsTextos")
+    void nenhumTextoFalaEmBotaoOuToque(String texto) {
+        assertThat(texto.toLowerCase(Locale.ROOT)).doesNotContain("botão", "botões", "toque", "janela de 24");
     }
 
     @ParameterizedTest
@@ -266,6 +278,7 @@ class TextosConversaTest {
                 TextosConversa.respostaConversei(),
                 TextosConversa.respostaNaoConsegui(),
                 TextosConversa.responsavelForaDeAlerta(),
+                TextosConversa.OPCOES_CONFIRMACAO,
                 TextosConversa.alertaRhSemClassificacao("{loja}", "{turno}")))
                 .allSatisfy(texto -> assertThat(doc).as("docs/textos-conversa.md").contains(texto));
         TextosConversa.rotulos().forEach((codigo, rotulo) ->

@@ -66,9 +66,9 @@ class AgendadorCheckinTest extends FluxoTestBase {
     }
 
     @Test
-    void janelaFechadaRegistraFalhaENaoTentaDeNovoNoMesmoDia(CapturedOutput saida) throws Exception {
+    void falhaDeEnvioRegistraFalhaENaoTentaDeNovoNoMesmoDia(CapturedOutput saida) throws Exception {
         cenario(saida);
-        GRAPH_API.fecharJanela(COLABORADOR);
+        EVOLUTION.falharPara(COLABORADOR);
         var agendador = agendador(INICIO);
 
         agendador.tick();

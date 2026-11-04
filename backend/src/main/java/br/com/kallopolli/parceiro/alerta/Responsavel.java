@@ -8,7 +8,7 @@ public record Responsavel(UUID id, String nome, String telefone, String papel, S
     public static final String GERENTE = "GERENTE";
     public static final String RH = "RH";
 
-    /** Número no formato que a Graph API espera em "to" (E.164 sem o +). */
+    /** Número no formato que o canal espera (E.164 sem o +). */
     public String numeroWhatsApp() {
         return telefone.startsWith("+") ? telefone.substring(1) : telefone;
     }

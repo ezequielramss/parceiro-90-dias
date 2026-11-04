@@ -1,5 +1,6 @@
 package br.com.kallopolli.parceiro.whatsapp;
 
+import br.com.kallopolli.parceiro.alerta.AlertaEntregaRepository;
 import br.com.kallopolli.parceiro.alerta.RespostaAlerta;
 import br.com.kallopolli.parceiro.alerta.Responsavel;
 import br.com.kallopolli.parceiro.alerta.ResponsavelRepository;
@@ -11,23 +12,26 @@ import br.com.kallopolli.parceiro.jornada.ColaboradorRepository;
 import br.com.kallopolli.parceiro.jornada.MensagemRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
- * Processa cada mensagem fora da thread do webhook.
+ * Processa cada mensagem fora da thread que a recebeu (webhook da Evolution ou simulador).
  *
  * <ol>
- *   <li>Toque em botão "alerta:..." é sempre resposta de responsável.
- *   <li>Número de colaborador ativo (com ou sem o nono dígito): grava a mensagem (wamid único
+ *   <li>CONVERSEI ou NÃO CONSEGUI de um número de responsável com alerta aberto: resposta ao
+ *       alerta mais recente ainda aberto daquele número. Sem alerta aberto, o texto segue o fluxo.
+ *   <li>Número de colaborador ativo (com ou sem o nono dígito): grava a mensagem (id único
  *       descarta repetições), aplica o aceite ("parar" tem prioridade sobre tudo) e, com aceite
  *       ativo, segue a conversa.
  *   <li>Número que só é responsável recebe o texto curto de responsável.
  *   <li>Número desconhecido é ignorado.
  * </ol>
- * Falhas vão para o log só com wamid e o tipo do erro.
+ * O mesmo número pode ser colaborador, gerente e RH. Falhas vão para o log só com o id da
+ * mensagem e o tipo do erro.
  */
 @Service
 public class ProcessadorMensagens {
@@ -40,8 +44,9 @@ public class ProcessadorMensagens {
     private final OrquestradorConversa orquestrador;
     private final RespostaAlerta respostaAlerta;
     private final ResponsavelRepository responsaveis;
+    private final AlertaEntregaRepository entregas;
     private final WamidsRecentes wamidsRecentes;
-    private final WhatsAppClient client;
+    private final CanalSaida canal;
 
     public ProcessadorMensagens(
             ColaboradorRepository colaboradores,
@@ -50,16 +55,18 @@ public class ProcessadorMensagens {
             OrquestradorConversa orquestrador,
             RespostaAlerta respostaAlerta,
             ResponsavelRepository responsaveis,
+            AlertaEntregaRepository entregas,
             WamidsRecentes wamidsRecentes,
-            WhatsAppClient client) {
+            CanalSaida canal) {
         this.colaboradores = colaboradores;
         this.mensagens = mensagens;
         this.fluxoConsentimento = fluxoConsentimento;
         this.orquestrador = orquestrador;
         this.respostaAlerta = respostaAlerta;
         this.responsaveis = responsaveis;
+        this.entregas = entregas;
         this.wamidsRecentes = wamidsRecentes;
-        this.client = client;
+        this.canal = canal;
     }
 
     @Async
@@ -76,11 +83,14 @@ public class ProcessadorMensagens {
     }
 
     private String executar(MensagemRecebida mensagem) {
-        if (mensagem.tocouBotao() && mensagem.botaoId().startsWith("alerta:")) {
-            return wamidsRecentes.novo(mensagem.wamid()) ? respostaAlerta.tratar(mensagem) : "REPETIDA_IGNORADA";
+        List<String> candidatos = TelefoneBrasil.candidatosE164(mensagem.de());
+        List<Responsavel> comoResponsavel = responsaveis.ativosPorTelefones(candidatos);
+
+        Optional<String> respostaAoAlerta = respostaAoAlerta(mensagem, comoResponsavel);
+        if (respostaAoAlerta.isPresent()) {
+            return respostaAoAlerta.get();
         }
 
-        List<String> candidatos = TelefoneBrasil.candidatosE164(mensagem.de());
         Optional<Colaborador> colaborador = candidatos.stream()
                 .map(colaboradores::buscarAtivoPorTelefone)
                 .flatMap(Optional::stream)
@@ -89,16 +99,35 @@ public class ProcessadorMensagens {
             return colaborador(colaborador.get(), mensagem);
         }
 
-        List<Responsavel> comoResponsavel = responsaveis.ativosPorTelefones(candidatos);
         if (!comoResponsavel.isEmpty()) {
             if (!wamidsRecentes.novo(mensagem.wamid())) {
                 return "REPETIDA_IGNORADA";
             }
-            // Responder abre a janela de 24 horas do responsável para os próximos alertas.
-            client.enviarTexto(comoResponsavel.get(0).numeroWhatsApp(), TextosConversa.responsavelForaDeAlerta());
+            canal.enviarTexto(comoResponsavel.get(0).numeroWhatsApp(), TextosConversa.responsavelForaDeAlerta());
             return "RESPONSAVEL_FORA_DE_ALERTA";
         }
         return "REMETENTE_NAO_CADASTRADO";
+    }
+
+    /** CONVERSEI ou NÃO CONSEGUI vale para a entrega mais recente ainda aberta daquele número. */
+    private Optional<String> respostaAoAlerta(MensagemRecebida mensagem, List<Responsavel> comoResponsavel) {
+        if (comoResponsavel.isEmpty() || !MensagemRecebida.TEXTO.equals(mensagem.tipo())) {
+            return Optional.empty();
+        }
+        Optional<RespostaPorTexto.Alerta> resposta = RespostaPorTexto.alerta(mensagem.conteudo());
+        if (resposta.isEmpty()) {
+            return Optional.empty();
+        }
+        List<UUID> ids = comoResponsavel.stream().map(Responsavel::id).toList();
+        Optional<Long> entrega = entregas.maisRecenteAberta(ids);
+        if (entrega.isEmpty()) {
+            return Optional.empty();
+        }
+        if (!wamidsRecentes.novo(mensagem.wamid())) {
+            return Optional.of("REPETIDA_IGNORADA");
+        }
+        return Optional.of(respostaAlerta.tratar(
+                RespostaPorTexto.acaoAlerta(entrega.get(), resposta.get()), mensagem.de()));
     }
 
     private String colaborador(Colaborador colaborador, MensagemRecebida mensagem) {

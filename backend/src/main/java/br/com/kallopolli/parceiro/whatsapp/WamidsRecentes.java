@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 /**
  * Idempotência das mensagens de responsáveis (gerente e RH), que não são gravadas em
  * public.mensagens (a tabela exige colaborador). Guarda os últimos wamids em memória: cobre
- * os reenvios da Meta enquanto o backend está no ar. O toque em botão também é idempotente
- * pela própria regra (toque repetido não muda nada).
+ * os reenvios da Evolution enquanto o backend está no ar. Responder CONVERSEI ou NÃO CONSEGUI
+ * duas vezes também não muda nada, pela própria regra.
  */
 @Component
 public class WamidsRecentes {

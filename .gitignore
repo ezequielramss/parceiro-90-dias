@@ -9,3 +9,7 @@ target/
 *.log
 .env.*
 !.env.example
+
+# Evolution API local (segredos)
+evolution/.env
+evolution/qrcode.html

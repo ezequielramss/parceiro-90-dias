@@ -4,7 +4,7 @@ import br.com.kallopolli.parceiro.consentimento.EnvioAcompanhamento;
 import br.com.kallopolli.parceiro.jornada.AuditoriaRepository;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.jornada.ColaboradorRepository;
-import br.com.kallopolli.parceiro.whatsapp.WhatsAppClientException;
+import br.com.kallopolli.parceiro.whatsapp.FalhaEnvio;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>dia_jornada = (hoje - data_inicio) + 1, no fuso America/Sao_Paulo. Insere a linha em checkins
  * antes de enviar (unicidade colaborador + dia): o mesmo dia nunca sai duas vezes, e um envio que
- * falha (janela de 24 horas fechada, sem modelo de mensagem) não é repetido. Dia perdido não é
+ * falha (canal fora do ar ou número recusado) não é repetido. Dia perdido não é
  * recuperado. Quem está confirmando um relato recebe o check-in depois, no mesmo dia.
  *
  * <p>Liga com parceiro.checkin.ativo=true.
@@ -85,12 +85,11 @@ public class AgendadorCheckin {
                 auditoria.registrar(quem, "CHECKIN_SEM_ACEITE", objeto);
                 return;
             }
-        } catch (WhatsAppClientException e) {
+        } catch (FalhaEnvio e) {
             auditoria.registrar(quem, "CHECKIN_FALHA_ENVIO", objeto);
             log.atWarn().setMessage("check-in não enviado")
                     .addKeyValue("checkin_id", checkinId.get())
                     .addKeyValue("status_http", e.status())
-                    .addKeyValue("codigo_meta", e.codigoMeta())
                     .log();
             return;
         }

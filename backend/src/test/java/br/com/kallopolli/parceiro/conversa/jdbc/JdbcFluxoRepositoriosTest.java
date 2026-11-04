@@ -136,4 +136,44 @@ class JdbcFluxoRepositoriosTest {
                     .isEqualTo(true);
         });
     }
+
+    @Test
+    void entregaMaisRecenteAbertaEListasDoSimulador() {
+        emTransacaoDesfeita(() -> {
+            var repos = new JdbcAlertaRepositorios(jdbc);
+            var conversa = new JdbcConversaRepositorios(jdbc);
+            var jornada = new JdbcRepositorios(jdbc);
+            jdbc.sql("""
+                    insert into public.responsaveis (nome, telefone, papel, loja) values
+                      ('Gerente Ficticio', '+5511999990804', 'GERENTE', 'Loja Teste'),
+                      ('RH Ficticio', '+5511999990804', 'RH', null),
+                      ('Inativo Ficticio', '+5511999990805', 'RH', null)""").update();
+            jdbc.sql("update public.responsaveis set ativo = false where telefone = '+5511999990805'").update();
+            var doNumero = repos.ativosPorTelefones(List.of("+5511999990804"));
+            var ids = doNumero.stream().map(r -> r.id()).toList();
+            assertThat(repos.maisRecenteAberta(ids)).isEmpty();
+            assertThat(repos.maisRecenteAberta(List.of())).isEmpty();
+
+            long mensagem = jornada.registrarEntrada("wamid.JDBC-FLX-3", COLABORADOR, "text", "relato ficticio")
+                    .orElseThrow();
+            long relato = conversa.criar(COLABORADOR, mensagem, "relato ficticio");
+            long alerta = repos.criar(relato, "GERENTE_E_RH", false);
+            long antiga = repos.criar(alerta, doNumero.get(0).id());
+            long nova = repos.criar(alerta, doNumero.get(1).id());
+            jdbc.sql("update public.alerta_entregas set enviado_em = now() - interval '1 hour' where id = :id")
+                    .param("id", antiga).update();
+
+            assertThat(repos.maisRecenteAberta(ids)).contains(nova);
+            repos.responder(nova, AlertaEntregaRepository.NAO_CONSEGUI);
+            assertThat(repos.maisRecenteAberta(ids)).as("NÃO CONSEGUI continua aberta").contains(nova);
+            repos.responder(nova, AlertaEntregaRepository.CONVERSEI);
+            assertThat(repos.maisRecenteAberta(ids)).contains(antiga);
+            repos.marcarFalha(antiga);
+            assertThat(repos.maisRecenteAberta(ids)).as("entrega com falha não recebe resposta").isEmpty();
+
+            assertThat(repos.responsaveisAtivos()).extracting("telefone")
+                    .contains("+5511999990804").doesNotContain("+5511999990805");
+            assertThat(jornada.colaboradoresAtivos()).extracting("id").contains(COLABORADOR);
+        });
+    }
 }

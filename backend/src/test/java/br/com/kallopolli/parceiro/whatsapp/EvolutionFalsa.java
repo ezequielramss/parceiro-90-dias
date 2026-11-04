@@ -11,34 +11,32 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** Servidor HTTP local que faz o papel da Graph API nos testes. Nada sai da máquina. */
-class GraphApiFalsa implements AutoCloseable {
+/**
+ * Servidor HTTP local que faz o papel da Evolution API nos testes (POST
+ * /message/sendText/{instância}). Nada sai da máquina; números e textos são fictícios.
+ */
+public class EvolutionFalsa implements AutoCloseable {
 
-    record Requisicao(String metodo, String caminho, String authorization, String corpo) {}
+    /** Uma chamada recebida: método, caminho, cabeçalho apikey e corpo. */
+    public record Requisicao(String metodo, String caminho, String apikey, String corpo) {}
 
-    /** Resposta 200 padrão: um wamid novo a cada envio. */
-    static final String WAMID_GERADO = null;
-
-    /** Erro da Meta quando a janela de 24 horas está fechada e não há modelo de mensagem. */
-    static final String ERRO_JANELA_FECHADA = "{\"error\":{\"message\":\"fora da janela\",\"code\":131047}}";
+    /** Resposta 200 padrão: um id novo a cada envio, em key.id, como a Evolution devolve. */
+    public static final String ID_GERADO = null;
 
     private final HttpServer servidor;
     private final BlockingQueue<Requisicao> recebidas = new LinkedBlockingQueue<>();
-    private final Set<String> semJanela = ConcurrentHashMap.newKeySet();
+    private final Set<String> comFalha = ConcurrentHashMap.newKeySet();
     private final AtomicLong sequencia = new AtomicLong();
     private volatile int status = 200;
-    private volatile String resposta = WAMID_GERADO;
+    private volatile String resposta = ID_GERADO;
     private volatile long atrasoMs = 0;
 
-    GraphApiFalsa() throws IOException {
+    public EvolutionFalsa() throws IOException {
         servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         servidor.createContext("/", troca -> {
             String corpo = new String(troca.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            recebidas.add(new Requisicao(
-                    troca.getRequestMethod(),
-                    troca.getRequestURI().getPath(),
-                    troca.getRequestHeaders().getFirst("Authorization"),
-                    corpo));
+            recebidas.add(new Requisicao(troca.getRequestMethod(), troca.getRequestURI().getPath(),
+                    troca.getRequestHeaders().getFirst("apikey"), corpo));
             try {
                 Thread.sleep(atrasoMs);
             } catch (InterruptedException e) {
@@ -47,10 +45,11 @@ class GraphApiFalsa implements AutoCloseable {
             int codigo = status;
             String texto = resposta != null
                     ? resposta
-                    : "{\"messages\":[{\"id\":\"wamid.SAIDA-" + sequencia.incrementAndGet() + "\"}]}";
-            if (semJanela.stream().anyMatch(n -> corpo.contains("\"to\":\"" + n + "\""))) {
+                    : "{\"key\":{\"remoteJid\":\"x@s.whatsapp.net\",\"fromMe\":true,\"id\":\"EVO-SAIDA-"
+                        + sequencia.incrementAndGet() + "\"},\"status\":\"PENDING\"}";
+            if (comFalha.stream().anyMatch(n -> corpo.contains("\"number\":\"" + n + "\""))) {
                 codigo = 400;
-                texto = ERRO_JANELA_FECHADA;
+                texto = "{\"status\":400,\"error\":\"Bad Request\",\"response\":{\"message\":[\"falha ficticia\"]}}";
             }
             byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
             troca.getResponseHeaders().add("Content-Type", "application/json");
@@ -63,29 +62,33 @@ class GraphApiFalsa implements AutoCloseable {
         servidor.start();
     }
 
-    String url() {
+    public String url() {
         return "http://127.0.0.1:" + servidor.getAddress().getPort();
     }
 
-    void responder(int status, String resposta) {
+    public void responder(int status, String resposta) {
         this.status = status;
         this.resposta = resposta;
     }
 
-    void atrasar(long ms) {
+    public void atrasar(long ms) {
         this.atrasoMs = ms;
     }
 
-    /** Simula a janela de 24 horas fechada para este número (sem +). */
-    void fecharJanela(String numero) {
-        semJanela.add(numero);
+    /** Faz o envio para este número (só dígitos) falhar com 400. */
+    public void falharPara(String numero) {
+        comFalha.add(numero);
     }
 
-    void reabrirJanelas() {
-        semJanela.clear();
+    public void limpar() {
+        comFalha.clear();
+        status = 200;
+        resposta = ID_GERADO;
+        atrasoMs = 0;
+        recebidas.clear();
     }
 
-    BlockingQueue<Requisicao> recebidas() {
+    public BlockingQueue<Requisicao> recebidas() {
         return recebidas;
     }
 

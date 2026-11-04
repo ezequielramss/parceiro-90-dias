@@ -11,4 +11,7 @@ public interface ColaboradorRepository {
 
     /** Colaboradores ativos, com aceite ativo, que começaram entre as duas datas (inclusive). */
     List<Colaborador> ativosComAceiteIniciadosEntre(LocalDate de, LocalDate ate);
+
+    /** Todos os colaboradores ativos (lista de contatos do simulador local). */
+    List<Colaborador> colaboradoresAtivos();
 }

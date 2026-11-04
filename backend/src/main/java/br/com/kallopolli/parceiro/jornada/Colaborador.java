@@ -13,7 +13,7 @@ public record Colaborador(UUID id, String telefone, String nome, String loja, St
         this(id, telefone, null, null, null, null);
     }
 
-    /** Número no formato que a Graph API espera em "to" (E.164 sem o +). */
+    /** Número no formato que o canal espera (E.164 sem o +). */
     public String numeroWhatsApp() {
         return telefone.startsWith("+") ? telefone.substring(1) : telefone;
     }

@@ -143,6 +143,11 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
                 .toList();
     }
 
+    @Override
+    public List<Colaborador> colaboradoresAtivos() {
+        return colaboradores.values().stream().sorted(Comparator.comparing(Colaborador::telefone)).toList();
+    }
+
     // ConsentimentoRepository
 
     @Override
@@ -300,6 +305,13 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
         return Optional.ofNullable(responsaveis.get(id));
     }
 
+    @Override
+    public List<Responsavel> responsaveisAtivos() {
+        return responsaveis.values().stream()
+                .sorted(Comparator.comparing(Responsavel::papel).thenComparing(Responsavel::telefone))
+                .toList();
+    }
+
     /** Mesma regra de public.normalizar_loja. */
     private static String normalizar(String loja) {
         return loja == null ? "" : loja.strip().replaceAll("\\s+", " ").toLowerCase();
@@ -349,6 +361,16 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
     public Optional<Entrega> buscarEntrega(long entregaId) {
         return Optional.ofNullable(entregas.get(entregaId))
                 .map(e -> new Entrega(e.id(), e.alertaId(), e.responsavelId(), e.falhaEnvio(), e.resposta()));
+    }
+
+    /** Mesma regra do SQL: enviada sem falha, sem CONVERSEI, a mais recente (id maior). */
+    @Override
+    public Optional<Long> maisRecenteAberta(List<UUID> responsavelIds) {
+        return entregas.values().stream()
+                .filter(e -> responsavelIds.contains(e.responsavelId()))
+                .filter(e -> !e.falhaEnvio() && !AlertaEntregaRepository.CONVERSEI.equals(e.resposta()))
+                .max(Comparator.comparingLong(EntregaSalva::id))
+                .map(EntregaSalva::id);
     }
 
     @Override

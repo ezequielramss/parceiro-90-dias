@@ -19,11 +19,9 @@ public final class TextosConversa {
 
     private TextosConversa() {}
 
-    /** Rótulos de botão: no máximo 20 caracteres (limite do WhatsApp). */
-    public static final String BOTAO_ENVIAR = "Sim, pode enviar";
-    public static final String BOTAO_NAO_ENVIAR = "Não enviar";
-    public static final String BOTAO_CONVERSEI = "Conversei";
-    public static final String BOTAO_NAO_CONSEGUI = "Não consegui";
+    /** Opções escritas no fim das mensagens (o canal não tem botões; a resposta é por texto). */
+    public static final String OPCOES_CONFIRMACAO = "Responda SIM para enviar ou NÃO para descartar.";
+    public static final String OPCOES_ALERTA = "responda CONVERSEI ou NÃO CONSEGUI.";
 
     private static final String ESCALA = "1 = muito mal, 2 = mal, 3 = mais ou menos, 4 = bem, 5 = muito bem";
     private static final int MAX_CAMPO_CURTO = 60;
@@ -110,7 +108,8 @@ public final class TextosConversa {
         return "Entendi assim: " + limitar(motivo, MAX_CAMPO_LONGO) + "\n\n"
                 + "Posso encaminhar para " + destinatario(destino) + "? "
                 + "Este canal é confidencial, não anônimo.\n\n"
-                + "Se eu entendi errado, é só escrever de novo do seu jeito.";
+                + "Se eu entendi errado, é só escrever de novo do seu jeito.\n\n"
+                + OPCOES_CONFIRMACAO;
     }
 
     // 5. Encaminhado e nada enviado
@@ -157,7 +156,7 @@ public final class TextosConversa {
         return "Parceiro dos 90 dias: novo alerta de acompanhamento\n\n"
                 + campos(loja, turno, categoria)
                 + "Sugestão: " + limitar(acaoSugerida, MAX_CAMPO_LONGO) + "\n\n"
-                + "Este alerta é confidencial. Depois do acompanhamento, toque em uma das opções abaixo.";
+                + "Este alerta é confidencial. Depois do acompanhamento, " + OPCOES_ALERTA;
     }
 
     // 11. Alertas ao RH: com o motivo; nunca nome nem texto do relato.
@@ -179,7 +178,7 @@ public final class TextosConversa {
                 + "A análise automática não funcionou para este relato. "
                 + "Ele está registrado no sistema e precisa da leitura de uma pessoa do RH.\n\n"
                 + AVISO_IDENTIFICACAO + "\n\n"
-                + "Depois do contato, toque em uma das opções abaixo.";
+                + "Depois do contato, " + OPCOES_ALERTA;
     }
 
     private static final String AVISO_IDENTIFICACAO =
@@ -190,10 +189,10 @@ public final class TextosConversa {
                 + "Resumo: " + limitar(motivo, MAX_CAMPO_LONGO) + "\n"
                 + "Sugestão: " + limitar(acaoSugerida, MAX_CAMPO_LONGO) + "\n\n"
                 + AVISO_IDENTIFICACAO + "\n\n"
-                + "Depois do contato, toque em uma das opções abaixo.";
+                + "Depois do contato, " + OPCOES_ALERTA;
     }
 
-    // 12. Respostas ao responsável depois do toque
+    // 12. Respostas ao responsável depois de CONVERSEI ou NÃO CONSEGUI
 
     public static String respostaConversei() {
         return "Registrado: contato realizado. O caso segue em acompanhamento até o RH ou o gestor "
@@ -201,14 +200,14 @@ public final class TextosConversa {
     }
 
     public static String respostaNaoConsegui() {
-        return "Registrado. O alerta continua pendente. Quando conseguir conversar, toque em Conversei.";
+        return "Registrado. O alerta continua pendente. Quando conseguir conversar, responda CONVERSEI.";
     }
 
     // 13. Responsável que escreve fora de um alerta
 
     public static String responsavelForaDeAlerta() {
         return "Oi! Por aqui eu envio os alertas de acompanhamento quando houver algum. "
-                + "Quando chegar um, é só usar os botões da mensagem.";
+                + "Quando chegar um, é só responder CONVERSEI ou NÃO CONSEGUI.";
     }
 
     // 14. Rótulos das categorias
