@@ -77,6 +77,11 @@
                 <directory>${project.basedir}/../dashboard</directory>
                 <targetPath>static</targetPath>
             </resource>
+            <!-- Simulador local: simulador/ no classpath fora de static/, servido só com o canal simulador. -->
+            <resource>
+                <directory>${project.basedir}/../simulador</directory>
+                <targetPath>simulador</targetPath>
+            </resource>
         </resources>
         <plugins>
             <plugin>

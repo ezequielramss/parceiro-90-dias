@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Simulador | Parceiro dos 90 dias</title>
+  <link rel="stylesheet" href="/simulador/estilo.css">
+  <script type="module" src="/simulador/app.js"></script>
+</head>
+<body>
+  <main class="simulador">
+    <header class="topo">
+      <div>
+        <h1>Simulador de WhatsApp</h1>
+        <p>Só nesta máquina. As conversas ficam na memória e somem quando o backend reinicia.</p>
+      </div>
+    </header>
+
+    <section class="quem" aria-labelledby="quem-titulo">
+      <h2 id="quem-titulo">Quem está escrevendo</h2>
+      <label for="contato">Telefone cadastrado</label>
+      <select id="contato"></select>
+      <label for="telefone">Ou digite um telefone (DDI + DDD + número)</label>
+      <div class="linha">
+        <input id="telefone" type="tel" inputmode="numeric" autocomplete="off" placeholder="5511999990000">
+        <button id="usar" type="button">Usar este telefone</button>
+      </div>
+      <p id="aviso" class="aviso" role="status"></p>
+    </section>
+
+    <section class="conversa" aria-labelledby="conversa-titulo">
+      <h2 id="conversa-titulo">Conversa</h2>
+      <ol id="mensagens" class="mensagens" aria-live="polite"></ol>
+      <div id="atalhos" class="atalhos" aria-label="Respostas rápidas"></div>
+      <form id="form" class="linha">
+        <label class="oculto" for="texto">Mensagem</label>
+        <input id="texto" type="text" autocomplete="off" maxlength="4096" placeholder="Escreva uma mensagem">
+        <button type="submit">Enviar</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
