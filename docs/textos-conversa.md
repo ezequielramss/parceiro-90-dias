@@ -254,7 +254,7 @@ Um código desconhecido aparece como "Assunto não identificado".
 
 > **Pendente de aprovação do RH ou do jurídico.** Estes textos são novos e ainda não foram revisados.
 
-Em LIVRE (nenhum modo escolhido), qualquer texto que não seja uma escolha recebe o menu: não vira relato, não chama a IA e não gera alerta. A escolha vale pelo número ou pelo nome; maiúsculas, acentos e pontuação não importam.
+Em LIVRE (nenhum modo escolhido), o texto que não é uma escolha recebe o menu. Só vira relato se a triagem abaixo achar algo grave. A escolha vale pelo número ou pelo nome; maiúsculas, acentos e pontuação não importam.
 
 Menu. A lista é montada a partir dos agentes ativos, na ordem de cada um:
 
@@ -297,6 +297,8 @@ Que bom! Escreva seu elogio com suas palavras. Para voltar ao menu, escreva MENU
 ```
 
 A linha de urgência só aparece com o agente Relato ativo, e o número acompanha a posição dele no menu.
+
+**Triagem de sinais graves.** Antes do menu ou do aviso abaixo, o texto solto passa pela IA, exceto o que não tem conteúdo ("oi", "ok" e parecidos). Se for urgente ou tiver sinais graves, vira relato e vai ao RH na hora, e a pessoa recebe o texto do relato urgente (item 6, sem alteração). Se não for, nada vira relato. **Para o jurídico:** esse texto vai ao Google antes de a pessoa escolher a opção, e o termo de participação precisa cobrir isso. Enquanto não houver aprovação, a triagem pode ser desligada com `parceiro.menu.triagem-sinais-graves=false`.
 
 Texto longo (mais de 120 caracteres, propriedade `parceiro.menu.texto-longo-caracteres`) sem modo escolhido, ou fora da nota no check-in. Nada é classificado, nada vira relato e nada é enviado neste passo. Sem o agente Relato ativo, a pessoa recebe só o menu:
 

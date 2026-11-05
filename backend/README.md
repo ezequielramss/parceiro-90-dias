@@ -184,10 +184,10 @@ a quem não escreveu antes. Também **não há botões**: as opções vão escri
 5. Com aceite ativo, a conversa segue no `OrquestradorConversa`, pelo estado em
    `conversa_estado`:
    - **AGUARDANDO_HUMOR** (depois do check-in): "2" ou "nota 2" grava o humor, responde e volta
-     a `LIVRE`. Outro texto volta a `LIVRE` e recebe o menu: nada vira relato sem a pessoa escolher.
+     a `LIVRE`. Outro texto volta a `LIVRE` e é tratado como em `LIVRE`.
    - **LIVRE**: a escolha do menu (número ou nome, sem diferença de maiúsculas, acentos e
-     pontuação) abre o agente e envia a abertura. Qualquer outro texto recebe o menu, sem relato,
-     sem classificador e sem alerta. Número sem opção recebe o menu curto.
+     pontuação) abre o agente e envia a abertura. Outro texto passa pela triagem de sinais graves
+     e, se não for grave, recebe o menu, sem relato e sem alerta. Número sem opção recebe o menu curto.
    - **EM_AGENTE**: cada mensagem vai ao agente ativo. "menu", "voltar" e "0" voltam ao menu. Sem
      mensagem por 30 minutos, vale como `LIVRE` (decidido ao ler o estado, por `atualizado_em`,
      sem tarefa agendada).
@@ -250,9 +250,12 @@ não muda o orquestrador. Dois agentes com o mesmo código derrubam a subida.
   desligam cada opção; um agente futuro usa `parceiro.agentes.<codigo>.ativo`.
 - **Texto solto:** em `LIVRE`, e fora da nota no check-in, texto curto recebe o menu. Acima de
   `parceiro.menu.texto-longo-caracteres` (padrão 120, de 20 a 4096, validado na subida), recebe o
-  aviso de que pode ser registrado como relato. Em nenhum dos casos há classificação, relato ou
-  alerta: a pessoa precisa responder com o número da opção e enviar de novo. O menu traz uma linha
-  para o que é urgente ou grave, só com o agente Relato ativo.
+  aviso de que pode ser registrado como relato: a pessoa precisa responder com o número da opção e
+  enviar de novo. O menu traz uma linha para o que é urgente ou grave, só com o agente Relato ativo.
+- **Triagem de sinais graves** (`parceiro.menu.triagem-sinais-graves`, padrão `true`): antes disso, o
+  texto solto com conteúdo passa pelo classificador. Urgente ou com sinais graves vira relato e vai
+  ao RH na hora, como qualquer urgente. O resto não deixa relato nem alerta. Falha da IA aqui não
+  alerta ninguém, então o texto grave não é detectado enquanto a IA estiver fora ou sem cota.
 - **Relato:** o fluxo de antes, sem mudança. Reclamação é um tipo de relato, não um agente.
 - **Elogio:** o texto passa pelo mesmo classificador, porque um elogio pode esconder um problema.
   Elogio de verdade é agradecido, sem alerta, e conta nos indicadores pela categoria `ELOGIO`, como

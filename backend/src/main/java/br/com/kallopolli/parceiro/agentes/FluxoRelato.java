@@ -15,6 +15,7 @@ import br.com.kallopolli.parceiro.jornada.AuditoriaRepository;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
 import br.com.kallopolli.parceiro.whatsapp.MensageiroWhatsApp;
 import br.com.kallopolli.parceiro.whatsapp.RespostaPorTexto;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
@@ -54,6 +55,27 @@ public class FluxoRelato {
     public Desfecho novo(Colaborador colaborador, String texto, long mensagemId) {
         long relatoId = relatos.criar(colaborador.id(), mensagemId, texto);
         return classificarEDecidir(colaborador, relatoId, texto);
+    }
+
+    /**
+     * Texto solto de quem não escolheu nada no menu: só o que é grave segue, e vai ao RH na hora, como
+     * qualquer urgente. O resto não deixa rastro de relato. Falha da IA aqui não alerta ninguém: em
+     * texto solto, um limite de cota da IA avisaria o RH de cada "tudo certo por aí?".
+     *
+     * @return o resultado para o log, se o texto era grave
+     */
+    public Optional<String> triarSinaisGraves(Colaborador colaborador, String texto, long mensagemId) {
+        Classificacao classificacao = classificador.classificar(texto);
+        DecisaoEncaminhamento decisao = decidir(classificacao);
+        if (classificacao.falhaIa() || !decisao.urgente()) {
+            return Optional.empty();
+        }
+        long relatoId = relatos.criar(colaborador.id(), mensagemId, texto);
+        relatos.gravarClassificacao(relatoId, classificacao);
+        confirmar(colaborador, relatoId);
+        alertas.criarEEnviar(colaborador, relatoId, decisao, classificacao);
+        mensageiro.enviar(colaborador, TextosConversa.relatoUrgente());
+        return Optional.of("URGENTE_TEXTO_SOLTO");
     }
 
     /** Resposta enquanto o relato aguarda confirmação: SIM envia, NÃO descarta, outro texto reclassifica. */

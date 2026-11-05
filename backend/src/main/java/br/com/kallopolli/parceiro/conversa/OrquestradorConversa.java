@@ -18,13 +18,13 @@ import org.springframework.stereotype.Service;
  * Conversa com o colaborador que tem aceite ativo: só decide para onde a mensagem vai.
  *
  * <ul>
- *   <li>LIVRE: a escolha do menu (número ou nome) abre o agente; qualquer outro texto recebe o menu,
- *       ou, se for longo, o aviso de que pode ser registrado como relato. Em nenhum dos casos há
- *       relato, classificador ou alerta;
+ *   <li>LIVRE: a escolha do menu (número ou nome) abre o agente. Outro texto passa pela triagem de
+ *       sinais graves: o grave vai ao RH na hora; o resto recebe o menu ou, se for longo, o aviso de
+ *       que pode ser registrado como relato, sem relato nem alerta;
  *   <li>EM_AGENTE: a mensagem vai ao agente ativo; "menu", "voltar" e "0" voltam ao menu. Sem
  *       mensagem por 30 minutos, vale como LIVRE;
- *   <li>AGUARDANDO_HUMOR: 1 a 5 ou "nota 2" grava o humor; outro texto volta a LIVRE e recebe o menu
- *       ou, se for longo, o aviso;
+ *   <li>AGUARDANDO_HUMOR: 1 a 5 ou "nota 2" grava o humor; outro texto volta a LIVRE e é tratado
+ *       como texto solto;
  *   <li>AGUARDANDO_CONFIRMACAO_RELATO: SIM envia, NÃO descarta, outro texto reclassifica; "menu",
  *       "voltar" e "0" descartam e voltam ao menu;
  *   <li>tipo não suportado recebe o texto próprio, sem mudar o estado.
@@ -37,6 +37,9 @@ public class OrquestradorConversa {
 
     private static final Pattern NOTA = Pattern.compile("(?:nota )?([1-5])");
     private static final Set<String> VOLTAR_AO_MENU = Set.of("menu", "voltar", "0");
+    /** Só o que não tem conteúdo fica fora da triagem. Na dúvida, o texto é classificado. */
+    private static final Set<String> SEM_CONTEUDO = Set.of("", "oi", "ola", "ok", "okay", "bom dia", "boa tarde",
+            "boa noite", "tudo bem", "obrigado", "obrigada", "agradeco", "valeu", "sim", "nao", "aceito");
 
     private final ConversaEstadoRepository estados;
     private final CheckinRepository checkins;
@@ -45,6 +48,7 @@ public class OrquestradorConversa {
     private final MensageiroWhatsApp mensageiro;
     private final Clock relogio;
     private final int limiteTextoLongo;
+    private final boolean triagemSinaisGraves;
 
     public OrquestradorConversa(ConversaEstadoRepository estados, CheckinRepository checkins, RegistroAgentes agentes,
                                 FluxoRelato fluxoRelato, MensageiroWhatsApp mensageiro, Clock relogio,
@@ -56,6 +60,7 @@ public class OrquestradorConversa {
         this.mensageiro = mensageiro;
         this.relogio = relogio;
         this.limiteTextoLongo = menu.textoLongoCaracteres();
+        this.triagemSinaisGraves = menu.triagemSinaisGraves();
     }
 
     /** Mensagem já gravada (mensagemId) de quem tem aceite ativo. Devolve o resultado para o log. */
@@ -70,9 +75,9 @@ public class OrquestradorConversa {
         EstadoConversa estado = estados.estadoVigente(colaborador.id(), relogio.instant());
         return switch (estado.tipo()) {
             case AGUARDANDO_CONFIRMACAO_RELATO -> confirmacao(colaborador, mensagem, estado.relatoId());
-            case AGUARDANDO_HUMOR -> humor(colaborador, mensagem, estado.checkinId());
+            case AGUARDANDO_HUMOR -> humor(colaborador, mensagem, estado.checkinId(), mensagemId);
             case EM_AGENTE -> emAgente(colaborador, mensagem, mensagemId, estado.agente());
-            case LIVRE -> livre(colaborador, mensagem);
+            case LIVRE -> livre(colaborador, mensagem, mensagemId);
         };
     }
 
@@ -82,7 +87,7 @@ public class OrquestradorConversa {
         fluxoRelato.descartarAoParar(colaborador);
     }
 
-    private String livre(Colaborador colaborador, MensagemRecebida mensagem) {
+    private String livre(Colaborador colaborador, MensagemRecebida mensagem, long mensagemId) {
         Optional<Agente> escolhido = agentes.escolher(mensagem.conteudo());
         if (escolhido.isPresent()) {
             Agente agente = escolhido.get();
@@ -94,7 +99,7 @@ public class OrquestradorConversa {
             mensageiro.enviar(colaborador, agentes.menuCurto());
             return "OPCAO_INVALIDA";
         }
-        return responderTextoSolto(colaborador, mensagem);
+        return responderTextoSolto(colaborador, mensagem, mensagemId);
     }
 
     private String emAgente(Colaborador colaborador, MensagemRecebida mensagem, long mensagemId, String codigo) {
@@ -114,7 +119,7 @@ public class OrquestradorConversa {
         return desfecho.resultado();
     }
 
-    private String humor(Colaborador colaborador, MensagemRecebida mensagem, long checkinId) {
+    private String humor(Colaborador colaborador, MensagemRecebida mensagem, long checkinId, long mensagemId) {
         Matcher nota = NOTA.matcher(TextoNormalizado.normalizar(mensagem.conteudo()));
         if (nota.matches()) {
             int valor = Integer.parseInt(nota.group(1));
@@ -125,7 +130,7 @@ public class OrquestradorConversa {
         }
         // Sem nota: o check-in fica sem resposta. Nada vira relato sem a pessoa escolher no menu.
         estados.definir(colaborador.id(), EstadoConversa.LIVRE);
-        return responderTextoSolto(colaborador, mensagem);
+        return responderTextoSolto(colaborador, mensagem, mensagemId);
     }
 
     private String confirmacao(Colaborador colaborador, MensagemRecebida mensagem, long relatoId) {
@@ -137,14 +142,29 @@ public class OrquestradorConversa {
         return fluxoRelato.confirmacao(colaborador, mensagem.conteudo(), relatoId);
     }
 
-    /** Texto que não é escolha nem nota. Longo: pode ser algo a contar, e a pessoa é avisada. Só avisa: nada é registrado. */
-    private String responderTextoSolto(Colaborador colaborador, MensagemRecebida mensagem) {
+    /**
+     * Texto que não é escolha nem nota. O grave vai ao RH pela triagem. Do resto, o longo pode ser algo
+     * a contar, e a pessoa é avisada; o aviso e o menu não registram nada.
+     */
+    private String responderTextoSolto(Colaborador colaborador, MensagemRecebida mensagem, long mensagemId) {
+        if (triagemSinaisGraves && temConteudo(mensagem)) {
+            Optional<String> grave = fluxoRelato.triarSinaisGraves(colaborador, mensagem.conteudo(), mensagemId);
+            if (grave.isPresent()) {
+                return grave.get();
+            }
+        }
         Optional<String> aviso = textoLongo(mensagem) ? agentes.avisoTextoLongo() : Optional.empty();
         if (aviso.isPresent()) {
             mensageiro.enviar(colaborador, aviso.get());
             return "TEXTO_LONGO";
         }
         return enviarMenu(colaborador);
+    }
+
+    private boolean temConteudo(MensagemRecebida mensagem) {
+        String texto = TextoNormalizado.normalizar(mensagem.conteudo());
+        return !SEM_CONTEUDO.contains(texto) && !VOLTAR_AO_MENU.contains(texto) && !texto.matches("\\d+")
+                && agentes.escolher(texto).isEmpty();
     }
 
     private boolean textoLongo(MensagemRecebida mensagem) {
