@@ -32,9 +32,8 @@ class MenuAgentesTest extends FluxoTestBase {
     // LIVRE
 
     @ParameterizedTest
-    @ValueSource(strings = {"oi", "ok", "bom dia", "   ", "menu", "voltar", "sim", "não",
-            "um texto bem longo contando que o gerente grita com todo mundo no fechamento e ninguem faz nada"})
-    void qualquerTextoEmLivreDevolveOMenuSemRelatoNemClassificador(String texto, CapturedOutput saida) throws Exception {
+    @ValueSource(strings = {"oi", "OK!", "bom dia", "   ", "👍", "menu", "voltar", "sim", "não", "Obrigada."})
+    void textoSemConteudoEmLivreDevolveOMenuSemRelatoNemClassificador(String texto, CapturedOutput saida) throws Exception {
         cenario(saida);
         classificador.proibir();
 
@@ -107,7 +106,6 @@ class MenuAgentesTest extends FluxoTestBase {
     @Test
     void depoisDe30MinutosOAgenteExpiraEOTextoRecebeOMenu(CapturedOutput saida) throws Exception {
         cenario(saida);
-        classificador.proibir();
         texto(saida, "1");
         enviadas();
         repositorios.envelhecerEstado(colaborador.id(), Duration.ofMinutes(31));
@@ -206,7 +204,6 @@ class MenuAgentesTest extends FluxoTestBase {
     @Test
     void textoQueNaoENotaNoCheckinRecebeOMenuSemRelato(CapturedOutput saida) throws Exception {
         cenario(saida);
-        classificador.proibir();
         agendador(RepositoriosEmMemoria.INICIO).tick();
         enviadas();
 
@@ -295,16 +292,14 @@ class MenuAgentesTest extends FluxoTestBase {
     }
 
     @Test
-    void textoLongoEmLivreRecebeOAvisoSemRelatoNemClassificador(CapturedOutput saida) throws Exception {
+    void textoLongoEmLivreRecebeOAvisoSemRelato(CapturedOutput saida) throws Exception {
         cenario(saida);
-        classificador.proibir();
 
         texto(saida, textoDe(LIMITE + 1));
 
         assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(AVISO_LONGO);
         assertThat(repositorios.relatos()).isEmpty();
         assertThat(repositorios.alertas()).isEmpty();
-        assertThat(classificador.recebidos()).isEmpty();
         assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
         assertThat(saida.getAll()).contains("TEXTO_LONGO").doesNotContain(textoDe(LIMITE + 1));
     }
@@ -312,7 +307,6 @@ class MenuAgentesTest extends FluxoTestBase {
     @Test
     void textoNoLimiteAindaRecebeSoOMenu(CapturedOutput saida) throws Exception {
         cenario(saida);
-        classificador.proibir();
 
         texto(saida, textoDe(LIMITE));
 
@@ -331,7 +325,6 @@ class MenuAgentesTest extends FluxoTestBase {
     @Test
     void textoLongoNoCheckinRecebeOAvisoEVoltaALivre(CapturedOutput saida) throws Exception {
         cenario(saida);
-        classificador.proibir();
         agendador(RepositoriosEmMemoria.INICIO).tick();
         enviadas();
 
@@ -392,6 +385,118 @@ class MenuAgentesTest extends FluxoTestBase {
 
         assertThat(ultimoRelato().texto()).isEqualTo(longo);
         assertThat(enviadas()).singleElement().matches(Enviada::pedeConfirmacao);
+    }
+
+    // Triagem de sinais graves no texto solto
+
+    private static final String GRAVE = "TEXTO-FICTICIO-GRAVE-CURTO";
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ASSEDIO", "HUMILHACAO", "SITUACAO_GRAVE"})
+    void textoCurtoEGraveEmLivreVaiAoRhNaHora(String categoria, CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(ClassificadorFalso.categoria(categoria));
+
+        texto(saida, GRAVE);
+
+        var enviadas = enviadas();
+        assertThat(para(enviadas, RH)).singleElement().extracting("texto").asString().startsWith("URGENTE")
+                .contains(ClassificadorFalso.MOTIVO).doesNotContain(GRAVE, "Pessoa Ficticia");
+        assertThat(para(enviadas, GERENTE)).isEmpty();
+        assertThat(para(enviadas, COLABORADOR)).singleElement().extracting("texto")
+                .isEqualTo(TextosConversa.relatoUrgente());
+        assertThat(repositorios.relatos()).singleElement().satisfies(r -> {
+            assertThat(r.texto()).isEqualTo(GRAVE);
+            assertThat(r.confirmacao()).isEqualTo("CONFIRMADO");
+        });
+        assertThat(repositorios.alertas()).singleElement().satisfies(a -> assertThat(a.urgente()).isTrue());
+        assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
+        assertThat(saida.getAll()).contains("URGENTE_TEXTO_SOLTO").doesNotContain(GRAVE);
+    }
+
+    @Test
+    void sinaisGravesEmCategoriaComumNoTextoSoltoVaoAoRh(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(new br.com.kallopolli.parceiro.classificacao.Classificacao("CANSACO", "m", "a", "alta", true, false));
+
+        texto(saida, GRAVE);
+
+        assertThat(para(enviadas(), RH)).singleElement().extracting("texto").asString().startsWith("URGENTE");
+    }
+
+    @Test
+    void textoGraveForaDaNotaNoCheckinVaiAoRhNaHora(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(ClassificadorFalso.categoria("ASSEDIO"));
+        agendador(RepositoriosEmMemoria.INICIO).tick();
+        enviadas();
+
+        texto(saida, GRAVE);
+
+        assertThat(para(enviadas(), RH)).hasSize(1);
+        assertThat(repositorios.checkins()).singleElement().extracting("humor").isNull();
+        assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
+    }
+
+    @Test
+    void textoLongoEGraveVaiAoRhEmVezDoAviso(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(ClassificadorFalso.categoria("ASSEDIO"));
+
+        texto(saida, textoDe(LIMITE + 1));
+
+        var enviadas = enviadas();
+        assertThat(para(enviadas, RH)).hasSize(1);
+        assertThat(para(enviadas, COLABORADOR)).singleElement().extracting("texto")
+                .isEqualTo(TextosConversa.relatoUrgente());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CANSACO", "VONTADE_DE_SAIR", "CONFLITO_CHEFIA", "NAO_CLASSIFICADO", "ELOGIO"})
+    void textoSoltoQueNaoEGraveNaoDeixaRelatoNemAlerta(String categoria, CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(ClassificadorFalso.categoria(categoria));
+
+        texto(saida, "tudo certo por ai hoje?");
+
+        assertThat(classificador.recebidos()).containsExactly("tudo certo por ai hoje?");
+        assertThat(repositorios.relatos()).isEmpty();
+        assertThat(repositorios.alertas()).isEmpty();
+        assertThat(enviadas()).singleElement().extracting("texto").asString().endsWith(MENU);
+    }
+
+    @Test
+    void falhaDaIaNoTextoSoltoNaoAlertaNinguem(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.sempre(br.com.kallopolli.parceiro.classificacao.Classificacao.falha());
+
+        texto(saida, GRAVE);
+
+        assertThat(repositorios.relatos()).isEmpty();
+        assertThat(repositorios.alertas()).isEmpty();
+        assertThat(enviadas()).singleElement().extracting("texto").asString().endsWith(MENU);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "Fazer um elogio", "9", "0"})
+    void escolhaENumeroNaoPassamPelaTriagem(String texto, CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.proibir();
+
+        texto(saida, texto);
+
+        assertThat(classificador.recebidos()).isEmpty();
+    }
+
+    @Test
+    void notaNoCheckinNaoPassaPelaTriagem(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.proibir();
+        agendador(RepositoriosEmMemoria.INICIO).tick();
+
+        texto(saida, "3");
+
+        assertThat(repositorios.checkins()).singleElement().extracting("humor").isEqualTo(3);
     }
 
     // Elogio

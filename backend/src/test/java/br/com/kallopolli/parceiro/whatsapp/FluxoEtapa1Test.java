@@ -494,8 +494,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         texto(saida, "dormi 2 horas e estou exausto");
 
         assertThat(repositorios.checkins()).singleElement().extracting("humor").isNull();
-        assertThat(repositorios.relatos()).as("nada vira relato sem a pessoa escolher").isEmpty();
-        assertThat(classificador.recebidos()).isEmpty();
+        assertThat(repositorios.relatos()).as("o que não é grave não vira relato sem a pessoa escolher").isEmpty();
         assertThat(enviadas()).singleElement().extracting("texto").asString().contains(TextosConversa.PEDIDO_NUMERO);
     }
 

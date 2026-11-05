@@ -20,9 +20,11 @@ import org.springframework.test.context.TestPropertySource;
 
 /**
  * Um agente novo é só um bean: este, registrado só no teste, aparece no menu e recebe as mensagens
- * sem mudança no orquestrador. O Elogio, desligado por configuração, some do menu.
+ * sem mudança no orquestrador. O Elogio, desligado por configuração, some do menu. A triagem também
+ * está desligada aqui: o classificador proibido prova que nenhum texto solto vai à IA.
  */
-@TestPropertySource(properties = {"parceiro.agentes.elogio.ativo=false", "parceiro.menu.texto-longo-caracteres=20"})
+@TestPropertySource(properties = {"parceiro.agentes.elogio.ativo=false", "parceiro.menu.texto-longo-caracteres=20",
+        "parceiro.menu.triagem-sinais-graves=false"})
 @ExtendWith(OutputCaptureExtension.class)
 class AgentesExtensibilidadeTest extends FluxoTestBase {
 

@@ -24,7 +24,10 @@ class MenuPropertiesTest {
 
     @Test
     void padraoE120() {
-        contexto.run(c -> assertThat(c.getBean(MenuProperties.class).textoLongoCaracteres()).isEqualTo(120));
+        contexto.run(c -> {
+            assertThat(c.getBean(MenuProperties.class).textoLongoCaracteres()).isEqualTo(120);
+            assertThat(c.getBean(MenuProperties.class).triagemSinaisGraves()).isTrue();
+        });
     }
 
     @ParameterizedTest
