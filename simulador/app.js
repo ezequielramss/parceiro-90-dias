@@ -32,7 +32,9 @@ function desenhar() {
     return balao;
   }));
   const ultimaDoRobo = [...atual.itens].reverse().find((item) => item.de === "robo");
-  atalhos.replaceChildren(...(ultimaDoRobo?.opcoes || []).map((opcao) => {
+  // Sem opções na última mensagem do robô, o atalho é voltar ao menu.
+  const opcoes = ultimaDoRobo?.opcoes?.length ? ultimaDoRobo.opcoes : (ultimaDoRobo ? ["menu"] : []);
+  atalhos.replaceChildren(...opcoes.map((opcao) => {
     const botao = el("button", "atalho", opcao);
     botao.type = "button";
     botao.addEventListener("click", () => enviar(opcao));

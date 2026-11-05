@@ -250,6 +250,52 @@ Usados no campo "Assunto" dos alertas.
 
 Um código desconhecido aparece como "Assunto não identificado".
 
+## 15. Menu e aberturas dos agentes (Java E)
+
+> **Pendente de aprovação do RH ou do jurídico.** Estes textos são novos e ainda não foram revisados.
+
+Em LIVRE (nenhum modo escolhido), qualquer texto que não seja uma escolha recebe o menu: não vira relato, não chama a IA e não gera alerta. A escolha vale pelo número ou pelo nome; maiúsculas, acentos e pontuação não importam.
+
+Menu. A lista é montada a partir dos agentes ativos, na ordem de cada um:
+
+```text
+Oi! Eu sou o Parceiro. O que você quer fazer agora? Responda com o número:
+
+1 - Contar algo (relato ou reclamação)
+2 - Fazer um elogio
+```
+
+Opção que não existe:
+
+```text
+Não encontrei essa opção. Responda com o número:
+
+1 - Contar algo (relato ou reclamação)
+2 - Fazer um elogio
+```
+
+Nenhum agente ativo:
+
+```text
+Oi! Eu sou o Parceiro. Por enquanto não há opções disponíveis por aqui.
+```
+
+Abertura de "Contar algo":
+
+```text
+Pode me contar com suas palavras: relato ou reclamação, como preferir. Este canal é confidencial, não anônimo. Para voltar ao menu, escreva MENU.
+```
+
+Abertura de "Fazer um elogio" (repetida se a pessoa mandar só espaços):
+
+```text
+Que bom! Escreva seu elogio com suas palavras. Para voltar ao menu, escreva MENU.
+```
+
+"menu", "voltar" e "0" voltam ao menu de qualquer agente. Sem mensagem por 30 minutos, a pessoa volta a não ter modo escolhido.
+
+**Textos aprovados que convém revisar junto:** eles convidam a "escrever", e agora o próximo texto recebe o menu antes. Não foram alterados nesta rodada: boas-vindas (item 1), resposta às notas (item 3), encaminhado e nada enviado (item 5).
+
 ## O que mudou em relação à versão com botões (Java D)
 
 A WhatsApp Cloud API da Meta saiu do MVP (a versão com botões está na tag `meta-cloud-api`). O resto dos textos aprovados não mudou.

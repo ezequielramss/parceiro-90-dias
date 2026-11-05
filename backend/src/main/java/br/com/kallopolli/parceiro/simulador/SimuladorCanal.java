@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 public class SimuladorCanal implements CanalSaida {
 
     static final int MAXIMO = 200;
+    private static final Pattern OPCAO_DO_MENU = Pattern.compile("(?m)^(\\d+) - ");
 
     /** Mensagem do robô para um número, com os atalhos das opções escritas no texto. */
     public record Saida(long seq, String numero, String texto, List<String> opcoes, Instant enviadaEm) {
@@ -69,6 +72,14 @@ public class SimuladorCanal implements CanalSaida {
 
     /** Os textos que a pessoa digitaria, a partir das opções escritas na mensagem. */
     static List<String> opcoes(String texto) {
+        if (texto.contains(TextosConversa.PEDIDO_NUMERO)) {
+            List<String> numeros = new ArrayList<>();
+            Matcher linha = OPCAO_DO_MENU.matcher(texto);
+            while (linha.find()) {
+                numeros.add(linha.group(1));
+            }
+            return numeros;
+        }
         if (texto.contains(TextosConversa.OPCOES_CONFIRMACAO)) {
             return List.of("SIM", "NÃO");
         }
