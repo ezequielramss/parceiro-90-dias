@@ -48,6 +48,11 @@ class TextosConversaTest {
                 TextosConversa.respostaConversei(),
                 TextosConversa.respostaNaoConsegui(),
                 TextosConversa.responsavelForaDeAlerta(),
+                TextosConversa.menu(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
+                TextosConversa.menuCurto(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
+                TextosConversa.menuVazio(),
+                TextosConversa.aberturaRelato(),
+                TextosConversa.aberturaElogio(),
                 TextosConversa.alertaRhSemClassificacao("Loja Teste", "Noite")));
         for (int dia = 1; dia <= 10; dia++) {
             textos.add(TextosConversa.checkin(dia, "Pessoa"));
@@ -279,6 +284,13 @@ class TextosConversaTest {
                 TextosConversa.respostaNaoConsegui(),
                 TextosConversa.responsavelForaDeAlerta(),
                 TextosConversa.OPCOES_CONFIRMACAO,
+                TextosConversa.NOME_AGENTE_RELATO,
+                TextosConversa.NOME_AGENTE_ELOGIO,
+                TextosConversa.menu(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
+                TextosConversa.menuCurto(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
+                TextosConversa.menuVazio(),
+                TextosConversa.aberturaRelato(),
+                TextosConversa.aberturaElogio(),
                 TextosConversa.alertaRhSemClassificacao("{loja}", "{turno}")))
                 .allSatisfy(texto -> assertThat(doc).as("docs/textos-conversa.md").contains(texto));
         TextosConversa.rotulos().forEach((codigo, rotulo) ->

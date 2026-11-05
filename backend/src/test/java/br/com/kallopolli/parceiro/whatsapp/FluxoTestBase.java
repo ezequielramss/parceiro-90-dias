@@ -74,6 +74,17 @@ abstract class FluxoTestBase extends WebhookTestBase {
     }
 
 
+    /** Escolhe "Contar algo" no menu (descarta a abertura) e conta o relato. */
+    String contar(CapturedOutput saida, String texto) throws Exception {
+        return contar(saida, COLABORADOR, texto);
+    }
+
+    String contar(CapturedOutput saida, String de, String texto) throws Exception {
+        texto(saida, de, "1");
+        enviadas();
+        return texto(saida, de, texto);
+    }
+
     void postar(CapturedOutput saida, String wamid, String corpo) throws Exception {
         mvc.perform(postWebhook(corpo)).andExpect(status().isOk());
         esperarProcessamento(saida, wamid);

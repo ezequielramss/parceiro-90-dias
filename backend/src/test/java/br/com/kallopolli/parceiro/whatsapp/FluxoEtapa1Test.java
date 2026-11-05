@@ -41,7 +41,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         assertThat(repositorios.checkins()).singleElement().extracting("humor").isEqualTo(2);
         assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(TextosConversa.respostaNota(2));
 
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         var relato = ultimoRelato();
         assertThat(relato.confirmacao()).isEqualTo("AGUARDANDO");
         assertThat(enviadas()).singleElement().satisfies(e -> {
@@ -79,7 +79,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @ValueSource(strings = {"Não", "nao", "NÃO.", " não! "})
     void naoDescartaENadaSai(String resposta, CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         enviadas();
 
         texto(saida, resposta);
@@ -94,7 +94,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @ValueSource(strings = {"sim", "Sim!", "SÍM", "  sim. "})
     void simComVariacoesEncaminha(String resposta, CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         enviadas();
 
         texto(saida, resposta);
@@ -106,7 +106,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @Test
     void textoNovoDuranteAConfirmacaoReclassifica(CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         enviadas();
 
         texto(saida, "na verdade e excesso de tarefas");
@@ -123,7 +123,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @Test
     void naoConseguiNaConfirmacaoNaoViraNao(CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         enviadas();
 
         texto(saida, "NÃO CONSEGUI");
@@ -140,15 +140,15 @@ class FluxoEtapa1Test extends FluxoTestBase {
 
         texto(saida, texto);
 
-        assertThat(repositorios.relatos()).as("vira relato, como qualquer texto").singleElement()
-                .extracting("texto").isEqualTo(texto);
+        assertThat(repositorios.relatos()).as("em LIVRE, recebe o menu").isEmpty();
+        assertThat(enviadas()).singleElement().extracting("texto").asString().contains(TextosConversa.PEDIDO_NUMERO);
         assertThat(repositorios.alertas()).isEmpty();
     }
 
     @Test
     void pararNoMeioLimpaOEstado(CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
 
         texto(saida, "PARAR");
 
@@ -164,7 +164,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         cenario(saida);
         classificador.sempre(ClassificadorFalso.categoria(categoria));
 
-        texto(saida, "relato ficticio grave");
+        contar(saida, "relato ficticio grave");
 
         var enviadas = enviadas();
         assertThat(para(enviadas, RH)).singleElement().satisfies(e -> {
@@ -187,7 +187,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         cenario(saida);
         classificador.sempre(new Classificacao("CANSACO", "m", "a", "alta", true, false));
 
-        texto(saida, "relato ficticio");
+        contar(saida, "relato ficticio");
 
         var enviadas = enviadas();
         assertThat(para(enviadas, RH)).singleElement().extracting("texto").asString().startsWith("URGENTE");
@@ -199,7 +199,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     void categoriaRestritaNuncaChegaAGerenteAlgum(String categoria, CapturedOutput saida) throws Exception {
         cenario(saida);
         classificador.sempre(ClassificadorFalso.categoria(categoria));
-        texto(saida, "relato ficticio");
+        contar(saida, "relato ficticio");
         var confirmacao = enviadas();
         assertThat(confirmacao).singleElement().extracting("texto").asString().contains("o RH");
 
@@ -215,7 +215,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     void alertaAoRhLevaOMotivoEAoGerenteNao(CapturedOutput saida) throws Exception {
         cenario(saida);
         classificador.sempre(ClassificadorFalso.categoria("VONTADE_DE_SAIR"));
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         enviadas();
 
         texto(saida, "sim");
@@ -232,7 +232,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         cenario(saida);
         classificador.sempre(Classificacao.falha());
 
-        texto(saida, RELATO);
+        contar(saida, RELATO);
 
         assertThat(ultimoRelato().classificacao().falhaIa()).isTrue();
         assertThat(ultimoRelato().confirmacao()).isEqualTo("CONFIRMADO");
@@ -281,7 +281,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @Test
     void converseiValeParaOAlertaMaisRecenteAindaAberto(CapturedOutput saida) throws Exception {
         alertaAoGerente(saida);
-        texto(saida, RELATO + " de novo");
+        contar(saida, RELATO + " de novo");
         texto(saida, "sim");
         enviadas();
         var entregas = repositorios.entregas();
@@ -308,7 +308,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         assertThat(repositorios.checkins()).singleElement().extracting("humor").as("nota continua nota").isEqualTo(3);
 
         classificador.sempre(ClassificadorFalso.categoria("VONTADE_DE_SAIR"));
-        texto(saida, po, RELATO);
+        contar(saida, po, RELATO);
         texto(saida, po, "SIM");
         var alertas = enviadas().stream().filter(Enviada::alerta).toList();
         assertThat(alertas).hasSize(2).allMatch(e -> e.para().equals(po));
@@ -330,7 +330,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         repositorios.cadastrarResponsavel("+" + GERENTE, "GERENTE", "Loja Teste");
         repositorios.cadastrarResponsavel("+" + RH, "RH", null);
         texto(saida, "aceito");
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         assertThat(enviadas()).anyMatch(Enviada::pedeConfirmacao);
 
         texto(saida, "sim");
@@ -345,7 +345,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     void falhaDeEnvioAoResponsavelRegistraFalha(CapturedOutput saida) throws Exception {
         cenario(saida);
         EVOLUTION.falharPara(GERENTE);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
 
         texto(saida, "sim");
 
@@ -365,6 +365,8 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @Test
     void idRepetidoNaoDuplicaNada(CapturedOutput saida) throws Exception {
         cenario(saida);
+        texto(saida, "1");
+        enviadas();
         String corpo = payloadTexto("EVO-DUP-RELATO", COLABORADOR, RELATO);
         postar(saida, "EVO-DUP-RELATO", corpo);
         mvc.perform(postWebhook(corpo));
@@ -425,7 +427,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @ValueSource(strings = {"audio", "image", "video", "sticker"})
     void tipoNaoSuportadoRecebeTextoProprioSemMudarOEstado(String tipo, CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         var estadoAntes = repositorios.estadoDe(colaborador.id());
         enviadas();
 
@@ -439,6 +441,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     @Test
     void textoEstendidoTambemELido(CapturedOutput saida) throws Exception {
         cenario(saida);
+        texto(saida, "1");
 
         postar(saida, "EVO-EXT-1", payloadTextoEstendido("EVO-EXT-1", COLABORADOR, RELATO));
 
@@ -449,7 +452,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     void textoSoComEspacosNaoViraRelato(CapturedOutput saida) throws Exception {
         cenario(saida);
 
-        texto(saida, "   ");
+        contar(saida, "   ");
 
         assertThat(repositorios.relatos()).isEmpty();
         assertThat(classificador.recebidos()).isEmpty();
@@ -461,7 +464,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
         cenario(saida);
         classificador.sempre(ClassificadorFalso.categoria("ELOGIO"));
 
-        texto(saida, "elogio ficticio a equipe");
+        contar(saida, "elogio ficticio a equipe");
 
         assertThat(repositorios.alertas()).isEmpty();
         assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(TextosConversa.elogioRecebido());
@@ -491,7 +494,9 @@ class FluxoEtapa1Test extends FluxoTestBase {
         texto(saida, "dormi 2 horas e estou exausto");
 
         assertThat(repositorios.checkins()).singleElement().extracting("humor").isNull();
-        assertThat(repositorios.relatos()).hasSize(1);
+        assertThat(repositorios.relatos()).as("nada vira relato sem a pessoa escolher").isEmpty();
+        assertThat(classificador.recebidos()).isEmpty();
+        assertThat(enviadas()).singleElement().extracting("texto").asString().contains(TextosConversa.PEDIDO_NUMERO);
     }
 
     @ParameterizedTest
@@ -511,7 +516,7 @@ class FluxoEtapa1Test extends FluxoTestBase {
     /** Leva até um alerta enviado ao gerente. */
     private void alertaAoGerente(CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, RELATO);
+        contar(saida, RELATO);
         texto(saida, "sim");
         List<Enviada> alerta = para(enviadas(), GERENTE);
         assertThat(alerta).hasSize(1);
