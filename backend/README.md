@@ -248,6 +248,11 @@ não muda o orquestrador. Dois agentes com o mesmo código derrubam a subida.
 
 - `parceiro.agentes.relato.ativo` e `parceiro.agentes.elogio.ativo` (padrão `true`) ligam e
   desligam cada opção; um agente futuro usa `parceiro.agentes.<codigo>.ativo`.
+- **Texto solto:** em `LIVRE`, e fora da nota no check-in, texto curto recebe o menu. Acima de
+  `parceiro.menu.texto-longo-caracteres` (padrão 120, de 20 a 4096, validado na subida), recebe o
+  aviso de que pode ser registrado como relato. Em nenhum dos casos há classificação, relato ou
+  alerta: a pessoa precisa responder com o número da opção e enviar de novo. O menu traz uma linha
+  para o que é urgente ou grave, só com o agente Relato ativo.
 - **Relato:** o fluxo de antes, sem mudança. Reclamação é um tipo de relato, não um agente.
 - **Elogio:** o texto passa pelo mesmo classificador, porque um elogio pode esconder um problema.
   Elogio de verdade é agradecido, sem alerta, e conta nos indicadores pela categoria `ELOGIO`, como

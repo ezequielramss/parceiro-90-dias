@@ -231,6 +231,21 @@ public final class TextosConversa {
         return "Oi! Eu sou o Parceiro. Por enquanto não há opções disponíveis por aqui.";
     }
 
+    /** @param numero o número da opção de relato no menu */
+    public static String avisoUrgencia(int numero) {
+        return "Se for algo urgente ou grave, responda " + numero + " e conte.";
+    }
+
+    /**
+     * Texto longo fora de um agente: nada é classificado nem registrado neste passo.
+     *
+     * @param numero o número da opção de relato no menu
+     */
+    public static String avisoTextoLongo(int numero) {
+        return "Parece que você quer me contar algo. Responda " + numero
+                + " para registrar como relato e envie de novo, ou escreva MENU para ver as opções.";
+    }
+
     public static String aberturaRelato() {
         return "Pode me contar com suas palavras: relato ou reclamação, como preferir. "
                 + "Este canal é confidencial, não anônimo. Para voltar ao menu, escreva MENU.";

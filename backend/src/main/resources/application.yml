@@ -35,6 +35,9 @@ parceiro:
   # Canal do WhatsApp: evolution (padrão; Evolution API) ou simulador (chat local em /simulador).
   whatsapp:
     canal: ${WHATSAPP_CANAL:evolution}
+  # Acima deste tamanho (20 a 4096), texto solto recebe o aviso de que pode virar relato, em vez de só o menu.
+  menu:
+    texto-longo-caracteres: 120
   # Opções do menu do colaborador. Um agente desligado some do menu.
   agentes:
     relato:

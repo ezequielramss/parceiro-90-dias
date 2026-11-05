@@ -19,10 +19,12 @@ import org.springframework.stereotype.Service;
  *
  * <ul>
  *   <li>LIVRE: a escolha do menu (número ou nome) abre o agente; qualquer outro texto recebe o menu,
- *       sem relato, sem classificador e sem alerta;
+ *       ou, se for longo, o aviso de que pode ser registrado como relato. Em nenhum dos casos há
+ *       relato, classificador ou alerta;
  *   <li>EM_AGENTE: a mensagem vai ao agente ativo; "menu", "voltar" e "0" voltam ao menu. Sem
  *       mensagem por 30 minutos, vale como LIVRE;
- *   <li>AGUARDANDO_HUMOR: 1 a 5 ou "nota 2" grava o humor; outro texto volta a LIVRE e recebe o menu;
+ *   <li>AGUARDANDO_HUMOR: 1 a 5 ou "nota 2" grava o humor; outro texto volta a LIVRE e recebe o menu
+ *       ou, se for longo, o aviso;
  *   <li>AGUARDANDO_CONFIRMACAO_RELATO: SIM envia, NÃO descarta, outro texto reclassifica; "menu",
  *       "voltar" e "0" descartam e voltam ao menu;
  *   <li>tipo não suportado recebe o texto próprio, sem mudar o estado.
@@ -42,15 +44,18 @@ public class OrquestradorConversa {
     private final FluxoRelato fluxoRelato;
     private final MensageiroWhatsApp mensageiro;
     private final Clock relogio;
+    private final int limiteTextoLongo;
 
     public OrquestradorConversa(ConversaEstadoRepository estados, CheckinRepository checkins, RegistroAgentes agentes,
-                                FluxoRelato fluxoRelato, MensageiroWhatsApp mensageiro, Clock relogio) {
+                                FluxoRelato fluxoRelato, MensageiroWhatsApp mensageiro, Clock relogio,
+                                MenuProperties menu) {
         this.estados = estados;
         this.checkins = checkins;
         this.agentes = agentes;
         this.fluxoRelato = fluxoRelato;
         this.mensageiro = mensageiro;
         this.relogio = relogio;
+        this.limiteTextoLongo = menu.textoLongoCaracteres();
     }
 
     /** Mensagem já gravada (mensagemId) de quem tem aceite ativo. Devolve o resultado para o log. */
@@ -89,7 +94,7 @@ public class OrquestradorConversa {
             mensageiro.enviar(colaborador, agentes.menuCurto());
             return "OPCAO_INVALIDA";
         }
-        return enviarMenu(colaborador);
+        return responderTextoSolto(colaborador, mensagem);
     }
 
     private String emAgente(Colaborador colaborador, MensagemRecebida mensagem, long mensagemId, String codigo) {
@@ -120,7 +125,7 @@ public class OrquestradorConversa {
         }
         // Sem nota: o check-in fica sem resposta. Nada vira relato sem a pessoa escolher no menu.
         estados.definir(colaborador.id(), EstadoConversa.LIVRE);
-        return enviarMenu(colaborador);
+        return responderTextoSolto(colaborador, mensagem);
     }
 
     private String confirmacao(Colaborador colaborador, MensagemRecebida mensagem, long relatoId) {
@@ -130,6 +135,23 @@ public class OrquestradorConversa {
             return "DESCARTADO_MENU";
         }
         return fluxoRelato.confirmacao(colaborador, mensagem.conteudo(), relatoId);
+    }
+
+    /** Texto que não é escolha nem nota. Longo: pode ser algo a contar, e a pessoa é avisada. Só avisa: nada é registrado. */
+    private String responderTextoSolto(Colaborador colaborador, MensagemRecebida mensagem) {
+        Optional<String> aviso = textoLongo(mensagem) ? agentes.avisoTextoLongo() : Optional.empty();
+        if (aviso.isPresent()) {
+            mensageiro.enviar(colaborador, aviso.get());
+            return "TEXTO_LONGO";
+        }
+        return enviarMenu(colaborador);
+    }
+
+    private boolean textoLongo(MensagemRecebida mensagem) {
+        String texto = mensagem.conteudo().strip();
+        return texto.codePointCount(0, texto.length()) > limiteTextoLongo
+                && !querVoltarAoMenu(mensagem)
+                && agentes.escolher(texto).isEmpty();
     }
 
     private String enviarMenu(Colaborador colaborador) {

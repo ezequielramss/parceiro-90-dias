@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -46,14 +47,36 @@ public class RegistroAgentes {
         return ativos;
     }
 
-    /** O menu completo: lista numerada na ordem dos agentes. */
+    /** O menu completo: lista numerada na ordem dos agentes, com o aviso de urgência se o Relato estiver ativo. */
     public String menu() {
-        return ativos.isEmpty() ? TextosConversa.menuVazio() : TextosConversa.menu(linhas());
+        return ativos.isEmpty() ? TextosConversa.menuVazio() : comAvisoDeUrgencia(TextosConversa.menu(linhas()));
     }
 
     /** O menu curto, para quem digitou uma opção que não existe. */
     public String menuCurto() {
-        return ativos.isEmpty() ? TextosConversa.menuVazio() : TextosConversa.menuCurto(linhas());
+        return ativos.isEmpty() ? TextosConversa.menuVazio() : comAvisoDeUrgencia(TextosConversa.menuCurto(linhas()));
+    }
+
+    /** O aviso para texto longo fora de um agente. Sem o Relato ativo, não existe: a pessoa recebe o menu. */
+    public Optional<String> avisoTextoLongo() {
+        return numeroDoRelato().stream().mapToObj(TextosConversa::avisoTextoLongo).findFirst();
+    }
+
+    private String comAvisoDeUrgencia(String menu) {
+        return numeroDoRelato().stream()
+                .mapToObj(numero -> menu + "\n\n" + TextosConversa.avisoUrgencia(numero))
+                .findFirst()
+                .orElse(menu);
+    }
+
+    /** O número da opção de relato no menu: depende da ordem dos agentes ativos. */
+    private OptionalInt numeroDoRelato() {
+        for (int i = 0; i < ativos.size(); i++) {
+            if (AgenteRelato.CODIGO.equals(ativos.get(i).codigo())) {
+                return OptionalInt.of(i + 1);
+            }
+        }
+        return OptionalInt.empty();
     }
 
     private List<String> linhas() {

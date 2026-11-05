@@ -29,6 +29,7 @@ public class SimuladorCanal implements CanalSaida {
 
     static final int MAXIMO = 200;
     private static final Pattern OPCAO_DO_MENU = Pattern.compile("(?m)^(\\d+) - ");
+    private static final Pattern AVISO_TEXTO_LONGO = Pattern.compile("Responda (\\d+) para registrar como relato");
 
     /** Mensagem do robô para um número, com os atalhos das opções escritas no texto. */
     public record Saida(long seq, String numero, String texto, List<String> opcoes, Instant enviadaEm) {
@@ -72,6 +73,10 @@ public class SimuladorCanal implements CanalSaida {
 
     /** Os textos que a pessoa digitaria, a partir das opções escritas na mensagem. */
     static List<String> opcoes(String texto) {
+        Matcher avisoLongo = AVISO_TEXTO_LONGO.matcher(texto);
+        if (avisoLongo.find()) {
+            return List.of(avisoLongo.group(1), "menu");
+        }
         if (texto.contains(TextosConversa.PEDIDO_NUMERO)) {
             List<String> numeros = new ArrayList<>();
             Matcher linha = OPCAO_DO_MENU.matcher(texto);
