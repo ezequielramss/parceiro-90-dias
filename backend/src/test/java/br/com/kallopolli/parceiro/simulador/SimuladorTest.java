@@ -239,6 +239,7 @@ class SimuladorTest {
                 .containsExactly("1", "2", "3");
         assertThat(SimuladorCanal.opcoes(TextosConversa.menuCurto(List.of("1 - Contar algo")))).containsExactly("1");
         assertThat(SimuladorCanal.opcoes(TextosConversa.aberturaRelato())).as("a página mostra o atalho menu").isEmpty();
+        assertThat(SimuladorCanal.opcoes(TextosConversa.avisoTextoLongo(1))).containsExactly("1", "menu");
     }
 
     @Test

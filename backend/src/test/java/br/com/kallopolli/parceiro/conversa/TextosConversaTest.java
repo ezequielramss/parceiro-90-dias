@@ -51,6 +51,8 @@ class TextosConversaTest {
                 TextosConversa.menu(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
                 TextosConversa.menuCurto(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
                 TextosConversa.menuVazio(),
+                TextosConversa.avisoUrgencia(1),
+                TextosConversa.avisoTextoLongo(1),
                 TextosConversa.aberturaRelato(),
                 TextosConversa.aberturaElogio(),
                 TextosConversa.alertaRhSemClassificacao("Loja Teste", "Noite")));
@@ -289,6 +291,8 @@ class TextosConversaTest {
                 TextosConversa.menu(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
                 TextosConversa.menuCurto(List.of("1 - " + TextosConversa.NOME_AGENTE_RELATO, "2 - " + TextosConversa.NOME_AGENTE_ELOGIO)),
                 TextosConversa.menuVazio(),
+                TextosConversa.avisoUrgencia(1),
+                TextosConversa.avisoTextoLongo(1),
                 TextosConversa.aberturaRelato(),
                 TextosConversa.aberturaElogio(),
                 TextosConversa.alertaRhSemClassificacao("{loja}", "{turno}")))

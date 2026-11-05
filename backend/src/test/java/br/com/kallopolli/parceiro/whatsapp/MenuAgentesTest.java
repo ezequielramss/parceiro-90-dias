@@ -20,7 +20,10 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 class MenuAgentesTest extends FluxoTestBase {
 
     private static final String RELATO = "relato ficticio de cansaco no fechamento";
-    private static final String MENU = "1 - " + TextosConversa.NOME_AGENTE_RELATO + "\n2 - " + TextosConversa.NOME_AGENTE_ELOGIO;
+    private static final String MENU = "1 - " + TextosConversa.NOME_AGENTE_RELATO + "\n2 - " + TextosConversa.NOME_AGENTE_ELOGIO
+            + "\n\n" + TextosConversa.avisoUrgencia(1);
+    private static final String AVISO_LONGO = TextosConversa.avisoTextoLongo(1);
+    private static final int LIMITE = 120;
 
     private EstadoConversa estado() {
         return repositorios.estadoDe(colaborador.id());
@@ -151,20 +154,24 @@ class MenuAgentesTest extends FluxoTestBase {
         assertThat(repositorios.consentimentos()).extracting("ativo").containsExactly(false);
     }
 
-    @Test
-    void menuDuranteAConfirmacaoDescartaEVoltaAoMenu(CapturedOutput saida) throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"menu", "voltar", "0"})
+    void menuDuranteAConfirmacaoDescartaAvisaEVoltaAoMenu(String saidaDoAgente, CapturedOutput saida) throws Exception {
         cenario(saida);
         contar(saida, RELATO);
         enviadas();
 
-        texto(saida, "menu");
+        texto(saida, saidaDoAgente);
 
         assertThat(ultimoRelato().confirmacao()).isEqualTo("DESCARTADO");
         assertThat(ultimoRelato().texto()).isEqualTo(RELATO);
         assertThat(repositorios.alertas()).isEmpty();
         assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
-        assertThat(enviadas()).extracting("texto").hasSize(2)
-                .first().isEqualTo(TextosConversa.nadaEnviado());
+        var respostas = enviadas();
+        assertThat(respostas).extracting("texto").hasSize(2).first().isEqualTo(TextosConversa.nadaEnviado());
+        assertThat(respostas.get(1).texto()).as("o aviso vem antes do menu").endsWith(MENU);
+        assertThat(repositorios.auditoria()).filteredOn(a -> a.acao().equals("RELATO_DESCARTADO"))
+                .singleElement().satisfies(a -> assertThat(a.objeto()).isEqualTo("relato/" + ultimoRelato().id()));
     }
 
     @Test
@@ -279,6 +286,112 @@ class MenuAgentesTest extends FluxoTestBase {
         repositorios.marcarEstadoAtualizadoEm(colaborador.id(), agora.minus(Duration.ofMinutes(31)));
         agendador.tick();
         assertThat(repositorios.checkins()).hasSize(1);
+    }
+
+    // Texto longo
+
+    private static String textoDe(int caracteres) {
+        return "x".repeat(caracteres);
+    }
+
+    @Test
+    void textoLongoEmLivreRecebeOAvisoSemRelatoNemClassificador(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.proibir();
+
+        texto(saida, textoDe(LIMITE + 1));
+
+        assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(AVISO_LONGO);
+        assertThat(repositorios.relatos()).isEmpty();
+        assertThat(repositorios.alertas()).isEmpty();
+        assertThat(classificador.recebidos()).isEmpty();
+        assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
+        assertThat(saida.getAll()).contains("TEXTO_LONGO").doesNotContain(textoDe(LIMITE + 1));
+    }
+
+    @Test
+    void textoNoLimiteAindaRecebeSoOMenu(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.proibir();
+
+        texto(saida, textoDe(LIMITE));
+
+        assertThat(enviadas()).singleElement().extracting("texto").asString().endsWith(MENU);
+    }
+
+    @Test
+    void espacosNasPontasNaoContamParaOLimite(CapturedOutput saida) throws Exception {
+        cenario(saida);
+
+        texto(saida, "   " + textoDe(LIMITE) + "   ");
+
+        assertThat(enviadas()).singleElement().extracting("texto").asString().endsWith(MENU);
+    }
+
+    @Test
+    void textoLongoNoCheckinRecebeOAvisoEVoltaALivre(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        classificador.proibir();
+        agendador(RepositoriosEmMemoria.INICIO).tick();
+        enviadas();
+
+        texto(saida, textoDe(LIMITE + 1));
+
+        assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(AVISO_LONGO);
+        assertThat(repositorios.checkins()).singleElement().extracting("humor").isNull();
+        assertThat(repositorios.relatos()).isEmpty();
+        assertThat(repositorios.alertas()).isEmpty();
+        assertThat(estado()).isEqualTo(EstadoConversa.LIVRE);
+    }
+
+    @Test
+    void textoNoLimiteNoCheckinRecebeSoOMenu(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        agendador(RepositoriosEmMemoria.INICIO).tick();
+        enviadas();
+
+        texto(saida, textoDe(LIMITE));
+
+        assertThat(enviadas()).singleElement().extracting("texto").asString().endsWith(MENU);
+    }
+
+    @Test
+    void depoisDoAvisoAPessoaEscolheEContaDeNovo(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        String longo = textoDe(LIMITE + 1);
+        texto(saida, longo);
+        enviadas();
+        assertThat(repositorios.relatos()).isEmpty();
+
+        contar(saida, longo);
+
+        assertThat(repositorios.relatos()).singleElement().extracting("texto").isEqualTo(longo);
+        assertThat(enviadas()).singleElement().matches(Enviada::pedeConfirmacao);
+    }
+
+    @Test
+    void dentroDoAgenteTextoLongoEConteudoDoAgente(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        String longo = textoDe(LIMITE + 50);
+
+        contar(saida, longo);
+
+        assertThat(repositorios.relatos()).singleElement().extracting("texto").isEqualTo(longo);
+        assertThat(classificador.recebidos()).containsExactly(longo);
+        assertThat(enviadas()).singleElement().matches(Enviada::pedeConfirmacao);
+    }
+
+    @Test
+    void textoLongoNaConfirmacaoReclassificaSemAviso(CapturedOutput saida) throws Exception {
+        cenario(saida);
+        contar(saida, RELATO);
+        enviadas();
+        String longo = textoDe(LIMITE + 50);
+
+        texto(saida, longo);
+
+        assertThat(ultimoRelato().texto()).isEqualTo(longo);
+        assertThat(enviadas()).singleElement().matches(Enviada::pedeConfirmacao);
     }
 
     // Elogio

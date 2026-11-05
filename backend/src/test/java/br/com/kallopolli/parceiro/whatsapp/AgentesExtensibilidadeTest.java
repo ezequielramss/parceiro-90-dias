@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.kallopolli.parceiro.agentes.Agente;
 import br.com.kallopolli.parceiro.conversa.EstadoConversa;
+import br.com.kallopolli.parceiro.conversa.TextosConversa;
 import br.com.kallopolli.parceiro.jornada.Colaborador;
+import br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
@@ -20,7 +22,7 @@ import org.springframework.test.context.TestPropertySource;
  * Um agente novo é só um bean: este, registrado só no teste, aparece no menu e recebe as mensagens
  * sem mudança no orquestrador. O Elogio, desligado por configuração, some do menu.
  */
-@TestPropertySource(properties = "parceiro.agentes.elogio.ativo=false")
+@TestPropertySource(properties = {"parceiro.agentes.elogio.ativo=false", "parceiro.menu.texto-longo-caracteres=20"})
 @ExtendWith(OutputCaptureExtension.class)
 class AgentesExtensibilidadeTest extends FluxoTestBase {
 
@@ -78,7 +80,7 @@ class AgentesExtensibilidadeTest extends FluxoTestBase {
 
         texto(saida, "oi");
         assertThat(enviadas()).singleElement().extracting("texto").asString()
-                .endsWith("1 - Contar algo (relato ou reclamação)\n2 - Opcao ficticia")
+                .endsWith("1 - Contar algo (relato ou reclamação)\n2 - Opcao ficticia\n\n" + TextosConversa.avisoUrgencia(1))
                 .doesNotContain("elogio");
 
         texto(saida, "2");
@@ -93,6 +95,40 @@ class AgentesExtensibilidadeTest extends FluxoTestBase {
 
         texto(saida, "fim");
         assertThat(repositorios.estadoDe(colaborador.id())).isEqualTo(EstadoConversa.LIVRE);
+    }
+
+    /** Com o limite no mínimo (20), o que é resposta curta ou escolha não vira aviso; o resto, sim. */
+    @Test
+    void limiteBaixoNaoAtingeEscolhaNotaMenuNemConfirmacao(CapturedOutput saida) throws Exception {
+        cenario(saida);
+
+        texto(saida, "x".repeat(21));
+        assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(TextosConversa.avisoTextoLongo(1));
+
+        texto(saida, "x".repeat(20));
+        assertThat(enviadas()).singleElement().extracting("texto").asString().contains(TextosConversa.PEDIDO_NUMERO);
+
+        // Escolha pelo nome, com mais de 20 caracteres.
+        texto(saida, "Contar algo (relato ou reclamação)");
+        assertThat(repositorios.estadoDe(colaborador.id())).isEqualTo(EstadoConversa.emAgente("RELATO"));
+        assertThat(enviadas()).singleElement().extracting("texto").isEqualTo(TextosConversa.aberturaRelato());
+
+        texto(saida, "relato ficticio com mais de vinte caracteres");
+        enviadas();
+        texto(saida, "sim");
+        assertThat(repositorios.alertas()).hasSize(1);
+        enviadas();
+
+        // No check-in, a nota e o nome da opção não viram aviso.
+        agendador(RepositoriosEmMemoria.INICIO).tick();
+        enviadas();
+        texto(saida, "4");
+        assertThat(repositorios.checkins()).singleElement().extracting("humor").isEqualTo(4);
+        enviadas();
+
+        repositorios.definir(colaborador.id(), EstadoConversa.aguardandoHumor(repositorios.checkins().get(0).id()));
+        texto(saida, "Contar algo (relato ou reclamação)");
+        assertThat(enviadas()).singleElement().extracting("texto").asString().contains(TextosConversa.PEDIDO_NUMERO);
     }
 
     @Test

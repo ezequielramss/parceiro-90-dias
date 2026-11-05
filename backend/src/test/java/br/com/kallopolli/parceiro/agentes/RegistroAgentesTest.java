@@ -42,6 +42,30 @@ class RegistroAgentesTest {
         assertThat(r.menuCurto()).endsWith("1 - Primeira opção\n2 - Segunda opção");
     }
 
+    private static final Agente RELATO = new AgenteDeTeste("RELATO", "Contar algo", 10, true);
+    private static final Agente ANTES = new AgenteDeTeste("ANTES", "Vem antes", 5, true);
+
+    @Test
+    void linhaDeUrgenciaEAvisoDeTextoLongoSoComORelatoAtivo() {
+        var com = registro(new MockEnvironment(), RELATO, B);
+        assertThat(com.menu()).endsWith("\n\nSe for algo urgente ou grave, responda 1 e conte.");
+        assertThat(com.menuCurto()).endsWith("\n\nSe for algo urgente ou grave, responda 1 e conte.");
+        assertThat(com.avisoTextoLongo()).get().asString().contains("Responda 1 para registrar");
+
+        var desligado = registro(new MockEnvironment().withProperty("parceiro.agentes.relato.ativo", "false"), RELATO, B);
+        assertThat(desligado.menu()).doesNotContain("urgente").endsWith("1 - Segunda opção");
+        assertThat(desligado.menuCurto()).doesNotContain("urgente");
+        assertThat(desligado.avisoTextoLongo()).isEmpty();
+    }
+
+    @Test
+    void oNumeroAcompanhaAPosicaoDoRelatoNoMenu() {
+        var r = registro(new MockEnvironment(), RELATO, ANTES);
+
+        assertThat(r.menu()).contains("2 - Contar algo").endsWith("responda 2 e conte.");
+        assertThat(r.avisoTextoLongo()).get().asString().contains("Responda 2 para registrar");
+    }
+
     @Test
     void filtraPeloProprioAgenteEPelaConfiguracao() {
         var ambiente = new MockEnvironment().withProperty("parceiro.agentes.b.ativo", "false");
