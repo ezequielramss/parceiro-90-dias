@@ -177,6 +177,16 @@ class SimuladorTest {
         assertThat(repositorios.checkins()).singleElement().extracting("humor").isEqualTo(4);
         ultimas(COLABORADOR);
 
+        // Em LIVRE, qualquer texto recebe o menu, com os atalhos das opções.
+        escrever(saida, COLABORADOR, "oi");
+        assertThat(ultimas(COLABORADOR)).singleElement().satisfies(m -> {
+            assertThat(m.path("texto").asText()).contains(TextosConversa.PEDIDO_NUMERO);
+            assertThat(m.path("opcoes").toString()).contains("\"1\"", "\"2\"");
+        });
+        escrever(saida, COLABORADOR, "1");
+        assertThat(ultimas(COLABORADOR)).singleElement().extracting(m -> m.path("texto").asText())
+                .isEqualTo(TextosConversa.aberturaRelato());
+
         classificador.sempre(ClassificadorFalso.categoria("VONTADE_DE_SAIR"));
         escrever(saida, COLABORADOR, RELATO);
         assertThat(ultimas(COLABORADOR)).singleElement().satisfies(m -> {
@@ -225,6 +235,11 @@ class SimuladorTest {
         assertThat(SimuladorCanal.opcoes(TextosConversa.alertaGerente("Loja", "Noite", "CANSACO", "a")))
                 .containsExactly("CONVERSEI", "NÃO CONSEGUI");
         assertThat(SimuladorCanal.opcoes(TextosConversa.respostaConversei())).isEmpty();
+        assertThat(SimuladorCanal.opcoes(TextosConversa.menu(List.of("1 - Contar algo", "2 - Fazer um elogio", "3 - Outra"))))
+                .containsExactly("1", "2", "3");
+        assertThat(SimuladorCanal.opcoes(TextosConversa.menuCurto(List.of("1 - Contar algo")))).containsExactly("1");
+        assertThat(SimuladorCanal.opcoes(TextosConversa.aberturaRelato())).as("a página mostra o atalho menu").isEmpty();
+        assertThat(SimuladorCanal.opcoes(TextosConversa.avisoTextoLongo(1))).containsExactly("1", "menu");
     }
 
     @Test

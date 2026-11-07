@@ -5,6 +5,8 @@ import br.com.kallopolli.parceiro.conversa.CheckinRepository;
 import br.com.kallopolli.parceiro.conversa.ConversaEstadoRepository;
 import br.com.kallopolli.parceiro.conversa.EstadoConversa;
 import br.com.kallopolli.parceiro.conversa.RelatoRepository;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -22,12 +24,13 @@ public class JdbcConversaRepositorios implements ConversaEstadoRepository, Check
 
     @Override
     public EstadoConversa estadoDe(UUID colaboradorId) {
-        return jdbc.sql("select estado, checkin_id, relato_id from public.conversa_estado where colaborador_id = :id")
+        return jdbc.sql("select estado, checkin_id, relato_id, agente from public.conversa_estado where colaborador_id = :id")
                 .param("id", colaboradorId)
                 .query((rs, n) -> new EstadoConversa(
                         EstadoConversa.Tipo.valueOf(rs.getString("estado")),
                         rs.getObject("checkin_id", Long.class),
-                        rs.getObject("relato_id", Long.class)))
+                        rs.getObject("relato_id", Long.class),
+                        rs.getString("agente")))
                 .optional()
                 .orElse(EstadoConversa.LIVRE);
     }
@@ -35,15 +38,25 @@ public class JdbcConversaRepositorios implements ConversaEstadoRepository, Check
     @Override
     public void definir(UUID colaboradorId, EstadoConversa estado) {
         jdbc.sql("""
-                        insert into public.conversa_estado (colaborador_id, estado, checkin_id, relato_id)
-                        values (:id, :estado, :checkin, :relato)
+                        insert into public.conversa_estado (colaborador_id, estado, checkin_id, relato_id, agente)
+                        values (:id, :estado, :checkin, :relato, :agente)
                         on conflict (colaborador_id) do update
-                          set estado = excluded.estado, checkin_id = excluded.checkin_id, relato_id = excluded.relato_id""")
+                          set estado = excluded.estado, checkin_id = excluded.checkin_id,
+                              relato_id = excluded.relato_id, agente = excluded.agente""")
                 .param("id", colaboradorId)
                 .param("estado", estado.tipo().name())
                 .param("checkin", estado.checkinId())
                 .param("relato", estado.relatoId())
+                .param("agente", estado.agente())
                 .update();
+    }
+
+    @Override
+    public Optional<Instant> atualizadoEm(UUID colaboradorId) {
+        return jdbc.sql("select atualizado_em from public.conversa_estado where colaborador_id = :id")
+                .param("id", colaboradorId)
+                .query((rs, n) -> rs.getObject("atualizado_em", OffsetDateTime.class).toInstant())
+                .optional();
     }
 
     @Override

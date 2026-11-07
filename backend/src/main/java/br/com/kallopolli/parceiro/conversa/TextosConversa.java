@@ -1,6 +1,7 @@
 package br.com.kallopolli.parceiro.conversa;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +23,11 @@ public final class TextosConversa {
     /** Opções escritas no fim das mensagens (o canal não tem botões; a resposta é por texto). */
     public static final String OPCOES_CONFIRMACAO = "Responda SIM para enviar ou NÃO para descartar.";
     public static final String OPCOES_ALERTA = "responda CONVERSEI ou NÃO CONSEGUI.";
+
+    /** Nomes das opções do menu (Java E: pendentes de aprovação do RH ou do jurídico). */
+    public static final String NOME_AGENTE_RELATO = "Contar algo (relato ou reclamação)";
+    public static final String NOME_AGENTE_ELOGIO = "Fazer um elogio";
+    public static final String PEDIDO_NUMERO = "Responda com o número:";
 
     private static final String ESCALA = "1 = muito mal, 2 = mal, 3 = mais ou menos, 4 = bem, 5 = muito bem";
     private static final int MAX_CAMPO_CURTO = 60;
@@ -208,6 +214,45 @@ public final class TextosConversa {
     public static String responsavelForaDeAlerta() {
         return "Oi! Por aqui eu envio os alertas de acompanhamento quando houver algum. "
                 + "Quando chegar um, é só responder CONVERSEI ou NÃO CONSEGUI.";
+    }
+
+    // 15. Menu e aberturas dos agentes (Java E: pendentes de aprovação do RH ou do jurídico)
+
+    /** @param opcoes linhas "1 - Nome", na ordem do menu */
+    public static String menu(List<String> opcoes) {
+        return "Oi! Eu sou o Parceiro. O que você quer fazer agora? " + PEDIDO_NUMERO + "\n\n" + String.join("\n", opcoes);
+    }
+
+    public static String menuCurto(List<String> opcoes) {
+        return "Não encontrei essa opção. " + PEDIDO_NUMERO + "\n\n" + String.join("\n", opcoes);
+    }
+
+    public static String menuVazio() {
+        return "Oi! Eu sou o Parceiro. Por enquanto não há opções disponíveis por aqui.";
+    }
+
+    /** @param numero o número da opção de relato no menu */
+    public static String avisoUrgencia(int numero) {
+        return "Se for algo urgente ou grave, responda " + numero + " e conte.";
+    }
+
+    /**
+     * Texto longo fora de um agente: nada é classificado nem registrado neste passo.
+     *
+     * @param numero o número da opção de relato no menu
+     */
+    public static String avisoTextoLongo(int numero) {
+        return "Parece que você quer me contar algo. Responda " + numero
+                + " para registrar como relato e envie de novo, ou escreva MENU para ver as opções.";
+    }
+
+    public static String aberturaRelato() {
+        return "Pode me contar com suas palavras: relato ou reclamação, como preferir. "
+                + "Este canal é confidencial, não anônimo. Para voltar ao menu, escreva MENU.";
+    }
+
+    public static String aberturaElogio() {
+        return "Que bom! Escreva seu elogio com suas palavras. Para voltar ao menu, escreva MENU.";
     }
 
     // 14. Rótulos das categorias

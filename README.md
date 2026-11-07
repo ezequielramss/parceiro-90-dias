@@ -49,4 +49,6 @@ Visão geral, Funcionários, Alertas, Relatos confidenciais, Bem-estar e Relató
 
 Neste MVP o WhatsApp funciona pela **Evolution API** (`evolution/README.md`), que conecta um número por QR code. Para testar sem nada externo, há um **simulador de chat** local em `http://localhost:8080/simulador` (`WHATSAPP_CANAL=simulador`). Os dois usam o mesmo fluxo; as opções vão escritas nas mensagens (SIM ou NÃO, CONVERSEI ou NÃO CONSEGUI), sem botões e sem janela de 24 horas.
 
+O colaborador escolhe num menu o que quer fazer (contar algo ou fazer um elogio). Um texto solto recebe o menu e só vira relato se a IA achar nele algo urgente ou grave. Detalhes em `backend/README.md`, seção "Agentes".
+
 > **Produção deve voltar à API oficial da Meta.** A conexão por QR code é não oficial e o número pode ser banido. A versão com a WhatsApp Cloud API está na tag git `meta-cloud-api`.

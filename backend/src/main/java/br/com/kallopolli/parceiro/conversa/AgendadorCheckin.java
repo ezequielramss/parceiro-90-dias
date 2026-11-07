@@ -71,7 +71,9 @@ public class AgendadorCheckin {
         if (dia < 1 || dia > ULTIMO_DIA) {
             return;
         }
-        if (estados.estadoDe(colaborador.id()).tipo() == EstadoConversa.Tipo.AGUARDANDO_CONFIRMACAO_RELATO) {
+        // Quem está confirmando um relato ou no meio de um agente recebe o check-in depois, no mesmo dia.
+        EstadoConversa.Tipo atual = estados.estadoVigente(colaborador.id(), relogio.instant()).tipo();
+        if (atual == EstadoConversa.Tipo.AGUARDANDO_CONFIRMACAO_RELATO || atual == EstadoConversa.Tipo.EM_AGENTE) {
             return;
         }
         Optional<Long> checkinId = checkins.criarSeNovo(colaborador.id(), dia);

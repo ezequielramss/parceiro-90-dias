@@ -9,6 +9,8 @@ import br.com.kallopolli.parceiro.conversa.CheckinRepository;
 import br.com.kallopolli.parceiro.conversa.ConversaEstadoRepository;
 import br.com.kallopolli.parceiro.conversa.EstadoConversa;
 import br.com.kallopolli.parceiro.conversa.RelatoRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,6 +55,7 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
     private final List<Consentimento> consentimentos = new CopyOnWriteArrayList<>();
     private final List<Auditoria> auditoria = new CopyOnWriteArrayList<>();
     private final Map<UUID, EstadoConversa> estados = new ConcurrentHashMap<>();
+    private final Map<UUID, Instant> estadosAtualizadosEm = new ConcurrentHashMap<>();
     private final Map<Long, Checkin> checkins = new ConcurrentHashMap<>();
     private final Map<Long, Relato> relatos = new ConcurrentHashMap<>();
     private final Map<UUID, Responsavel> responsaveis = new ConcurrentHashMap<>();
@@ -67,6 +70,7 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
         consentimentos.clear();
         auditoria.clear();
         estados.clear();
+        estadosAtualizadosEm.clear();
         checkins.clear();
         relatos.clear();
         responsaveis.clear();
@@ -216,6 +220,22 @@ public class RepositoriosEmMemoria implements ColaboradorRepository, Consentimen
     @Override
     public void definir(UUID colaboradorId, EstadoConversa estado) {
         estados.put(colaboradorId, estado);
+        estadosAtualizadosEm.put(colaboradorId, Instant.now());
+    }
+
+    @Override
+    public Optional<Instant> atualizadoEm(UUID colaboradorId) {
+        return Optional.ofNullable(estadosAtualizadosEm.get(colaboradorId));
+    }
+
+    /** Faz de conta que a última mensagem foi nesse instante (relógio fixo do agendador). */
+    public void marcarEstadoAtualizadoEm(UUID colaboradorId, Instant quando) {
+        estadosAtualizadosEm.put(colaboradorId, quando);
+    }
+
+    /** Faz de conta que a última mensagem foi há esse tempo (expiração de EM_AGENTE). */
+    public void envelhecerEstado(UUID colaboradorId, Duration tempo) {
+        estadosAtualizadosEm.computeIfPresent(colaboradorId, (k, quando) -> quando.minus(tempo));
     }
 
     // CheckinRepository

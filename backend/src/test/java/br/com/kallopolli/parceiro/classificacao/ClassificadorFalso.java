@@ -25,6 +25,13 @@ public class ClassificadorFalso implements ClassificadorRelato {
         this.regra = texto -> classificacao;
     }
 
+    /** A partir daqui, qualquer chamada faz o teste falhar. */
+    public void proibir() {
+        this.regra = texto -> {
+            throw new AssertionError("o classificador não deveria ter sido chamado");
+        };
+    }
+
     public void limpar() {
         recebidos.clear();
         regra = texto -> categoria("CANSACO");

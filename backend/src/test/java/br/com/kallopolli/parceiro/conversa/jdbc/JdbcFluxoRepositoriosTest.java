@@ -95,6 +95,29 @@ class JdbcFluxoRepositoriosTest {
     }
 
     @Test
+    void estadoEmAgenteGuardaOCodigoEExpiraDepoisDe30Minutos() {
+        emTransacaoDesfeita(() -> {
+            var conversa = new JdbcConversaRepositorios(jdbc);
+            var agora = java.time.Instant.now();
+            assertThat(conversa.atualizadoEm(COLABORADOR)).isEmpty();
+            assertThat(conversa.estadoVigente(COLABORADOR, agora)).isEqualTo(EstadoConversa.LIVRE);
+
+            conversa.definir(COLABORADOR, EstadoConversa.emAgente("RELATO"));
+            assertThat(conversa.estadoDe(COLABORADOR)).isEqualTo(EstadoConversa.emAgente("RELATO"));
+            assertThat(conversa.atualizadoEm(COLABORADOR)).isPresent();
+
+            var depois = conversa.atualizadoEm(COLABORADOR).orElseThrow();
+            assertThat(conversa.estadoVigente(COLABORADOR, depois.plus(java.time.Duration.ofMinutes(29))))
+                    .isEqualTo(EstadoConversa.emAgente("RELATO"));
+            assertThat(conversa.estadoVigente(COLABORADOR, depois.plus(java.time.Duration.ofMinutes(31))))
+                    .isEqualTo(EstadoConversa.LIVRE);
+
+            conversa.definir(COLABORADOR, EstadoConversa.LIVRE);
+            assertThat(conversa.estadoDe(COLABORADOR)).isEqualTo(EstadoConversa.LIVRE);
+        });
+    }
+
+    @Test
     void responsaveisAlertasEEntregas() {
         emTransacaoDesfeita(() -> {
             var repos = new JdbcAlertaRepositorios(jdbc);

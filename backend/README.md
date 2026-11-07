@@ -20,6 +20,7 @@ O que já existe:
   confirmação, alertas com CONVERSEI e NÃO CONSEGUI e auditoria.
 - **Java C:** dashboard com login e retenção de 90 dias.
 - **Java D:** canal Evolution API, simulador local e opções por texto, sem botões.
+- **Java E:** menu de agentes: o colaborador escolhe o que quer fazer (Relato e Elogio nesta rodada).
 
 ## Estrutura
 
@@ -52,8 +53,14 @@ backend/src/main/java/br/com/kallopolli/parceiro/
 │   ├── *Repository.java                 interfaces (colaboradores, consentimentos, mensagens, auditoria)
 │   ├── jdbc/JdbcRepositorios.java       implementação com JdbcClient sobre as tabelas da Etapa 1
 │   └── BancoProperties.java / BancoConfig.java   conexão lida do ambiente
+├── agentes/
+│   ├── Agente.java                      contrato de uma opção do menu; um agente novo é só um @Component
+│   ├── RegistroAgentes.java             filtra os ativos, ordena, monta o menu e recusa código duplicado
+│   ├── FluxoRelato.java                 classificação, confirmação, alertas, urgente e falha da IA
+│   ├── AgenteRelato.java                "Contar algo (relato ou reclamação)"
+│   └── AgenteElogio.java                "Fazer um elogio", que passa pelo mesmo classificador
 ├── conversa/
-│   ├── OrquestradorConversa.java        nota, relato, confirmação, urgente, falha da IA, elogio
+│   ├── OrquestradorConversa.java        tipo não suportado, nota, confirmação, menu e delegação ao agente
 │   ├── AgendadorCheckin.java            @Scheduled a cada minuto: check-in dos dias 1 a 10
 │   ├── TextosConversa.java              todos os textos (revisão em docs/textos-conversa.md)
 │   ├── *Repository.java                 estado da conversa, check-ins e relatos
@@ -177,9 +184,15 @@ a quem não escreveu antes. Também **não há botões**: as opções vão escri
 5. Com aceite ativo, a conversa segue no `OrquestradorConversa`, pelo estado em
    `conversa_estado`:
    - **AGUARDANDO_HUMOR** (depois do check-in): "2" ou "nota 2" grava o humor, responde e volta
-     a `LIVRE`. Outro texto vira relato (a pessoa escolheu falar).
-   - **LIVRE**: texto novo é um relato (H13). Texto vazio ou só com espaços não é gravado: o
-     assistente convida a escrever. O relato é gravado com `confirmacao = AGUARDANDO`,
+     a `LIVRE`. Outro texto volta a `LIVRE` e é tratado como em `LIVRE`.
+   - **LIVRE**: a escolha do menu (número ou nome, sem diferença de maiúsculas, acentos e
+     pontuação) abre o agente e envia a abertura. Outro texto passa pela triagem de sinais graves
+     e, se não for grave, recebe o menu, sem relato e sem alerta. Número sem opção recebe o menu curto.
+   - **EM_AGENTE**: cada mensagem vai ao agente ativo. "menu", "voltar" e "0" voltam ao menu. Sem
+     mensagem por 30 minutos, vale como `LIVRE` (decidido ao ler o estado, por `atualizado_em`,
+     sem tarefa agendada).
+   - **Agentes Relato e Elogio** (`FluxoRelato`, H13): texto vazio ou só com espaços não é
+     gravado: o assistente convida a escrever. O relato é gravado com `confirmacao = AGUARDANDO`,
      classificado e roteado pelo `RoteadorRelato`:
      - elogio: agradece e pronto, sem alerta;
      - urgente (inclui `sinais_graves`): `CONFIRMADO` na hora, alerta ao RH e aviso de relato
@@ -190,8 +203,8 @@ a quem não escreveu antes. Também **não há botões**: as opções vão escri
    - **AGUARDANDO_CONFIRMACAO_RELATO** (H16): SIM vira a ação `conf:<relatoId>:sim`, que cria e
      envia o alerta; NÃO vira `conf:<relatoId>:nao`, marca `DESCARTADO` e confirma que nada foi
      enviado. Maiúsculas, acentos e pontuação não importam, e NÃO CONSEGUI não é NÃO. Qualquer
-     outro texto substitui o relato, reclassifica e pede nova confirmação. Fora desse estado,
-     "sim" e "não" seguem o fluxo normal.
+     outro texto substitui o relato, reclassifica e pede nova confirmação. "menu", "voltar" e "0"
+     descartam o relato e voltam ao menu. Fora desse estado, "sim" e "não" seguem o fluxo normal.
    - Áudio, imagem, vídeo ou figurinha recebem "por enquanto só leio texto", sem mudar o estado.
 6. Toda mensagem processada gera o log `mensagem processada`, com o id da mensagem (`wamid`) e o
    `resultado`. Uma falha gera `falha ao processar mensagem`, só com o id e o nome da exceção.
@@ -203,7 +216,7 @@ America/Sao_Paulo (`Clock` injetado), e envia o check-in do dia a quem está ati
 ativo e ainda não recebeu o do dia: `dia_jornada = (hoje - data_inicio) + 1`, só dias 1 a 10.
 A linha em `checkins` é inserida antes do envio (unicidade colaborador + dia), então o mesmo
 dia nunca sai duas vezes. Dia perdido não é recuperado. Quem está confirmando um relato recebe
-o check-in depois, no mesmo dia. Sem resposta, não há cobrança. A nota é de 1 a 5; por isso
+o check-in depois, no mesmo dia; o mesmo vale para quem está no meio de um agente. Sem resposta, não há cobrança. A nota é de 1 a 5; por isso
 nenhuma outra opção usa números. Liga e desliga com `parceiro.checkin.ativo` (padrão `true`;
 os testes usam `false`).
 
@@ -226,6 +239,34 @@ os testes usam `false`).
 
 Mensagens de acompanhamento (check-in) só saem por `EnvioAcompanhamento.enviar(...)`, que
 recusa quem não tem aceite ativo.
+
+### Agentes (Java E)
+
+Cada opção do menu é um agente: uma classe `@Component` que implementa `Agente` (código estável,
+nome, ordem, abertura e `tratar`). O `RegistroAgentes` encontra todos pelo Spring: um agente novo
+não muda o orquestrador. Dois agentes com o mesmo código derrubam a subida.
+
+- `parceiro.agentes.relato.ativo` e `parceiro.agentes.elogio.ativo` (padrão `true`) ligam e
+  desligam cada opção; um agente futuro usa `parceiro.agentes.<codigo>.ativo`.
+- **Texto solto:** em `LIVRE`, e fora da nota no check-in, texto curto recebe o menu. Acima de
+  `parceiro.menu.texto-longo-caracteres` (padrão 120, de 20 a 4096, validado na subida), recebe o
+  aviso de que pode ser registrado como relato: a pessoa precisa responder com o número da opção e
+  enviar de novo. O menu traz uma linha para o que é urgente ou grave, só com o agente Relato ativo.
+- **Triagem de sinais graves** (`parceiro.menu.triagem-sinais-graves`, padrão `true`): antes disso, o
+  texto solto com conteúdo passa pelo classificador. Urgente ou com sinais graves vira relato e vai
+  ao RH na hora, como qualquer urgente. O resto não deixa relato nem alerta. Falha da IA aqui não
+  alerta ninguém, então o texto grave não é detectado enquanto a IA estiver fora ou sem cota.
+- **Relato:** o fluxo de antes, sem mudança. Reclamação é um tipo de relato, não um agente.
+- **Elogio:** o texto passa pelo mesmo classificador, porque um elogio pode esconder um problema.
+  Elogio de verdade é agradecido, sem alerta, e conta nos indicadores pela categoria `ELOGIO`, como
+  antes. Outra categoria segue o fluxo do relato (confirmação, urgente ou falha da IA). O texto tem
+  a mesma retenção de 90 dias.
+- **Precedência, sem colisão no mesmo telefone:** CONVERSEI e NÃO CONSEGUI de responsável com alerta
+  aberto vêm antes de tudo; 1 a 5 é nota só em `AGUARDANDO_HUMOR`; SIM e NÃO só na confirmação; os
+  números do menu só em `LIVRE`; PARAR acima de tudo, e limpa o agente ativo.
+- **Regras de todo agente:** texto do colaborador nunca vai para log nem auditoria; nada sai para
+  gerente ou RH fora das regras que já existem; texto livre passa pela regra de sinais graves
+  (`FluxoRelato`).
 
 ### Limitações desta etapa
 
@@ -357,6 +398,10 @@ Os testes usam segredos falsos, repositórios em memória e uma Evolution API si
   - id repetido não duplica;
 - **envio**: leva a `apikey` no cabeçalho e `{"number","text"}` no corpo; recusa e timeout viram
   `FalhaEnvio` sem chave, número nem texto;
+- **menu de agentes**: qualquer texto em `LIVRE` devolve o menu sem chamar o classificador; escolha
+  por número e por nome; opção inválida; "menu", "voltar" e "0"; expiração de 30 minutos; PARAR
+  limpa o agente; precedência no mesmo telefone; agente falso só no teste (`AgentesExtensibilidadeTest`),
+  código duplicado e agente desligado;
 - **respostas por texto**: SIM e NÃO só na confirmação; CONVERSEI e NÃO CONSEGUI no alerta mais
   recente aberto; NÃO CONSEGUI não vira NÃO; nota de 1 a 5 continua sendo nota; o mesmo telefone
   como colaborador, gerente e RH; texto sem relação segue o fluxo normal;

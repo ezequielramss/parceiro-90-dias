@@ -83,7 +83,7 @@ class AgendadorCheckinTest extends FluxoTestBase {
     @Test
     void quemEstaConfirmandoRelatoRecebeOCheckinDepois(CapturedOutput saida) throws Exception {
         cenario(saida);
-        texto(saida, "relato ficticio");
+        contar(saida, "relato ficticio");
         enviadas();
         var agendador = agendador(INICIO);
 

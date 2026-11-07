@@ -144,13 +144,13 @@ class LogsSemSegredosTest extends FluxoTestBase {
         cenario(saida);
         agendador(br.com.kallopolli.parceiro.jornada.RepositoriosEmMemoria.INICIO).tick();
         texto(saida, "3");
-        texto(saida, relato);
+        contar(saida, relato);
         texto(saida, "SIM");
         enviadas();
         texto(saida, GERENTE, "CONVERSEI");
         EVOLUTION.falharPara(RH);
         classificador.sempre(br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.categoria("ASSEDIO"));
-        texto(saida, relato + " grave");
+        contar(saida, relato + " grave");
 
         assertThat(saida.getAll()).contains("HUMOR_REGISTRADO", "AGUARDANDO_CONFIRMACAO", "ENCAMINHADO",
                 "CONVERSEI", "URGENTE", "falha ao enviar alerta");
@@ -193,6 +193,24 @@ class LogsSemSegredosTest extends FluxoTestBase {
         assertThat(saida.getAll()).doesNotContain(email, senha, token, token.substring(token.lastIndexOf('.') + 1),
                 SupabaseAuthFalso.CHAVE_PUBLICAVEL_FALSA, "parceiro_sessao=");
         assertThat(painelProps.toString()).doesNotContain(SupabaseAuthFalso.CHAVE_PUBLICAVEL_FALSA);
+        semSegredos(saida);
+    }
+
+    @Test
+    void agentesNaoLogamOTextoDoColaborador(CapturedOutput saida) throws Exception {
+        String elogio = "ELOGIO-FICTICIO-QUE-NAO-PODE-IR-PARA-LOG";
+        String qualquer = "TEXTO-LIVRE-FICTICIO-QUE-NAO-PODE-IR-PARA-LOG";
+        cenario(saida);
+
+        texto(saida, qualquer);
+        texto(saida, "2");
+        classificador.sempre(br.com.kallopolli.parceiro.classificacao.ClassificadorFalso.categoria("ELOGIO"));
+        texto(saida, elogio);
+
+        assertThat(saida.getAll()).contains("MENU", "AGENTE_ESCOLHIDO_ELOGIO", "\"resultado\":\"ELOGIO\"");
+        assertThat(saida.getAll()).doesNotContain(elogio, qualquer, COLABORADOR, "Pessoa Ficticia");
+        assertThat(repositorios.auditoria()).allSatisfy(a ->
+                assertThat(a.quem() + a.acao() + a.objeto()).doesNotContain(elogio, qualquer));
         semSegredos(saida);
     }
 

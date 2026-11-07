@@ -250,6 +250,78 @@ Usados no campo "Assunto" dos alertas.
 
 Um código desconhecido aparece como "Assunto não identificado".
 
+## 15. Menu e aberturas dos agentes (Java E)
+
+> **Pendente de aprovação do RH ou do jurídico.** Estes textos são novos e ainda não foram revisados.
+
+Em LIVRE (nenhum modo escolhido), o texto que não é uma escolha recebe o menu. Só vira relato se a triagem abaixo achar algo grave. A escolha vale pelo número ou pelo nome; maiúsculas, acentos e pontuação não importam.
+
+Menu. A lista é montada a partir dos agentes ativos, na ordem de cada um:
+
+```text
+Oi! Eu sou o Parceiro. O que você quer fazer agora? Responda com o número:
+
+1 - Contar algo (relato ou reclamação)
+2 - Fazer um elogio
+
+Se for algo urgente ou grave, responda 1 e conte.
+```
+
+Opção que não existe:
+
+```text
+Não encontrei essa opção. Responda com o número:
+
+1 - Contar algo (relato ou reclamação)
+2 - Fazer um elogio
+
+Se for algo urgente ou grave, responda 1 e conte.
+```
+
+Nenhum agente ativo:
+
+```text
+Oi! Eu sou o Parceiro. Por enquanto não há opções disponíveis por aqui.
+```
+
+Abertura de "Contar algo":
+
+```text
+Pode me contar com suas palavras: relato ou reclamação, como preferir. Este canal é confidencial, não anônimo. Para voltar ao menu, escreva MENU.
+```
+
+Abertura de "Fazer um elogio" (repetida se a pessoa mandar só espaços):
+
+```text
+Que bom! Escreva seu elogio com suas palavras. Para voltar ao menu, escreva MENU.
+```
+
+A linha de urgência só aparece com o agente Relato ativo, e o número acompanha a posição dele no menu.
+
+**Triagem de sinais graves.** Antes do menu ou do aviso abaixo, o texto solto passa pela IA, exceto o que não tem conteúdo ("oi", "ok" e parecidos). Se for urgente ou tiver sinais graves, vira relato e vai ao RH na hora, e a pessoa recebe o texto do relato urgente (item 6, sem alteração). Se não for, nada vira relato. **Para o jurídico:** esse texto vai ao Google antes de a pessoa escolher a opção, e o termo de participação precisa cobrir isso. Enquanto não houver aprovação, a triagem pode ser desligada com `parceiro.menu.triagem-sinais-graves=false`.
+
+Texto longo (mais de 120 caracteres, propriedade `parceiro.menu.texto-longo-caracteres`) sem modo escolhido, ou fora da nota no check-in. Nada é classificado, nada vira relato e nada é enviado neste passo. Sem o agente Relato ativo, a pessoa recebe só o menu:
+
+```text
+Parece que você quer me contar algo. Responda 1 para registrar como relato e envie de novo, ou escreva MENU para ver as opções.
+```
+
+"menu", "voltar" e "0" durante a confirmação do relato descartam o relato: a pessoa recebe "nada enviado" (item 5, sem alteração) e, em seguida, o menu.
+
+"menu", "voltar" e "0" voltam ao menu de qualquer agente. Sem mensagem por 30 minutos, a pessoa volta a não ter modo escolhido.
+
+### Textos aprovados que convidam a "escrever"
+
+Estes textos **não foram alterados**, mas agora levam ao menu: o próximo texto solto recebe o menu ou o aviso, e não vira relato. As redações abaixo são só propostas, para o RH decidir.
+
+| Texto aprovado | Trecho atual | Redação proposta para o trecho |
+|---|---|---|
+| Boas-vindas (item 1) | "Se quiser, você também pode me contar o que está acontecendo, a qualquer hora." | "Se quiser me contar o que está acontecendo, a qualquer hora, escreva qualquer mensagem e escolha \"Contar algo\" no menu." |
+| Notas 1 e 2 (item 3) | "Se quiser, me conte com suas palavras o que está acontecendo." | "Se quiser contar o que está acontecendo, escreva qualquer mensagem e escolha \"Contar algo\" no menu." |
+| Nota 3 (item 3) | "Se quiser contar algo sobre o seu dia, é só escrever." | "Se quiser contar algo sobre o seu dia, escreva qualquer mensagem e escolha \"Contar algo\" no menu." |
+| Encaminhado (item 5) | "Se quiser acrescentar algo, é só escrever." | "Se quiser acrescentar algo, escreva qualquer mensagem e escolha \"Contar algo\" no menu." |
+| Nada enviado (item 5) | "Se mudar de ideia ou quiser contar de outro jeito, é só escrever." | "Se mudar de ideia ou quiser contar de outro jeito, escreva qualquer mensagem e escolha \"Contar algo\" no menu." |
+
 ## O que mudou em relação à versão com botões (Java D)
 
 A WhatsApp Cloud API da Meta saiu do MVP (a versão com botões está na tag `meta-cloud-api`). O resto dos textos aprovados não mudou.
